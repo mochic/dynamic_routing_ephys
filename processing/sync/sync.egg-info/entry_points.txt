@@ -1,0 +1,4 @@
+[console_scripts]
+sync_device = sync.zro.sync_device:main
+sync_gui = sync.gui.sync_gui:main
+

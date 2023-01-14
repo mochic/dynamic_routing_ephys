@@ -1,0 +1,2 @@
+include sync/gui/sync_gui.ui
+include sync/gui/res/*
