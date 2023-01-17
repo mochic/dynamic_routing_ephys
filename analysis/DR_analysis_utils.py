@@ -39,10 +39,15 @@ class Session:
         self.trials=pd.read_csv(os.path.join(path,'trials_table.csv'))
         trial_stim_dur=np.zeros(len(self.trials))
         for tt in range(0,len(self.trials)):
-            if self.trials['trial_sound_dur'].iloc[tt]>0:
-                trial_stim_dur[tt]=self.trials['trial_sound_dur'].iloc[tt]
-            elif self.trials['trial_vis_stim_dur'].iloc[tt]>0:
-                trial_stim_dur[tt]=self.trials['trial_vis_stim_dur'].iloc[tt]
+            if 'trial_sound_dur' in self.trials.columns:
+                if self.trials['trial_sound_dur'].iloc[tt]>0:
+                    trial_stim_dur[tt]=self.trials['trial_sound_dur'].iloc[tt]
+            if 'trialSoundDur' in self.trials.columns:
+                if self.trials['trialSoundDur'].iloc[tt]>0:
+                    trial_stim_dur[tt]=self.trials['trialSoundDur'].iloc[tt]
+            if 'trial_vis_stim_dur' in self.trials.columns:
+                if self.trials['trial_vis_stim_dur'].iloc[tt]>0:
+                    trial_stim_dur[tt]=self.trials['trial_vis_stim_dur'].iloc[tt]
 
         self.trials['trial_stim_dur']=trial_stim_dur
         
