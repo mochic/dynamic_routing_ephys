@@ -78,10 +78,7 @@ def load_behavior_data(behavPath):
     
     #re-generate trial sound arrays if I forgot to save them (only early pilot recordings)
     # assumes sound1=6kHz and sound2=10kHz
-
     if len(trialSoundArray)==0:
-        soundstims=['sound1','sound2']
-        freqs=[6000,10000]
         soundHanningDur = 0.005 # seconds
     
         trialSoundArray=[]
@@ -130,21 +127,6 @@ def load_behavior_data(behavPath):
     block=[]
     stim_rewarded=[]
     
-    vis_go_count=0
-    vis_go_non_auto_reward=0
-    vis_nogo_count=0
-    vis_hit_count=0
-    vis_fa_count=0
-    
-    aud_go_count=0
-    aud_go_non_auto_reward=0
-    aud_nogo_count=0
-    aud_hit_count=0
-    aud_fa_count=0
-    
-    catch_count=0
-    catch_resp_count=0
-    
     for bb in range(0,len(unique_blocks)):
         
         blockTrialStart=np.where(trialBlock==unique_blocks[bb])[0][0]
@@ -181,12 +163,9 @@ def load_behavior_data(behavPath):
     
             #visual-go block
             if (trialStimID[tt] == 'vis1'):
-                vis_go_count+=1
                 vis_go_trials[tt]=True
                 if ~trialAutoRewarded[tt]:
-                    vis_go_non_auto_reward+=1
                     if temp_RW_lick:
-                        vis_hit_count+=1
                         vis_hit_trials[tt]=True
                     else:
                         vis_miss_trials[tt]=True
@@ -195,39 +174,30 @@ def load_behavior_data(behavPath):
     
     
             elif (trialStimID[tt] == 'vis2'):
-                vis_nogo_count+=1
                 vis_nogo_trials[tt]=True
                 if temp_RW_lick:
-                    vis_fa_count+=1
                     vis_false_alarm_trials[tt]=True
                 else:
                     vis_correct_reject_trials[tt]=True
     
     
             elif trialStimID[tt] == 'catch':
-                catch_count+=1
                 catch_trials[tt]=True
                 if temp_RW_lick:
-                    catch_resp_count+=1
                     catch_resp_trials[tt]==True
     
             elif ('sound1' in trialStimID[tt]):
-                aud_go_count+=1
                 aud_go_trials[tt]=True
                 if ~trialAutoRewarded[tt]:
-                    aud_go_non_auto_reward+=1
                     if temp_RW_lick:
-                        aud_hit_count+=1
                         aud_hit_trials[tt]=True
                     else:
                         aud_miss_trials[tt]=True
     
             elif ('sound2' in trialStimID[tt]):
-                aud_nogo_count+=1
                 aud_nogo_trials[tt]=True
                 if ~trialAutoRewarded[tt]:
                     if temp_RW_lick:
-                        aud_fa_count+=1
                         aud_false_alarm_trials[tt]=True
                     else:
                         aud_correct_reject_trials[tt]=True
