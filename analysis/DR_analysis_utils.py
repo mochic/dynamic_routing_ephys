@@ -48,6 +48,9 @@ class Session:
             if 'trial_vis_stim_dur' in self.trials.columns:
                 if self.trials['trial_vis_stim_dur'].iloc[tt]>0:
                     trial_stim_dur[tt]=self.trials['trial_vis_stim_dur'].iloc[tt]
+            if 'trialVisStimFrames' in self.trials.columns:
+                if self.trials['trialVisStimFrames'].iloc[tt]>0:
+                    trial_stim_dur[tt]=self.trials['trialVisStimFrames'].iloc[tt]/60
 
         self.trials['trial_stim_dur']=trial_stim_dur
         
