@@ -26,7 +26,7 @@ from DR_processing_utils import load_sound_pilot_data, sync_data_streams_sound_p
 def process_ephys_sessions(mainPath):
     
     #hack to account for RF mapping order:
-    if ('636397' in mainPath) | ('635891' in mainPath) | ('636760' in mainPath):
+    if ('636397' in mainPath) | ('635891' in mainPath) | ('636760' in mainPath) | ('636766' in mainPath):
         RF_first=True
     else:
         RF_first=False
@@ -106,7 +106,10 @@ mainPaths = [
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\625820_06222022\2022-06-22_14-25-10",
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\625821_07112022\2022-07-11_14-42-15",
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\625821_07122022\2022-07-12_13-51-39",
-    r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2023-01-17_11-39-17_646318",
+    # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2023-01-17_11-39-17_646318",
+    # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2023-01-18_10-44-55_646318",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\2023-01-23_11-50-37_636766",
+    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\2023-01-24_11-59-07_636766"
     ]
 
 for mm in mainPaths[:]:

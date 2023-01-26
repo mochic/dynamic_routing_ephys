@@ -27,11 +27,11 @@ def plot_data(mainPath):
     #make trial-based data array
     session.trial_da = make_trial_da(session.good_units, session.spike_times, session.trials)
     
-    # # #plot rasters function
-    # plot_rasters(mainPath, session.trial_da, session.good_units, session.trials, templeton_rec)
-    
     #plot heatmaps function
     plot_heatmaps(mainPath, session.trial_da, session.trials, session.good_units, templeton_rec)
+    
+    # #plot rasters function
+    plot_rasters(mainPath, session.trial_da, session.good_units, session.trials, templeton_rec)
     
     # # #plot rewarded vs. unrewarded rasters
     # plot_rew_nonrew_rasters(mainPath, session.trial_da, session.good_units, session.spike_times, 
@@ -57,7 +57,12 @@ mainPaths = [
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\opto pilot\2022-11-14_13-18-05_636760\processed",
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\opto pilot\2022-11-15_14-02-31_636760\processed",
     # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-12-05_13-08-02_644547\processed",
-    r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-12-06_12-35-35_644547\processed",
+    # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-12-06_12-35-35_644547\processed",
+    # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2023-01-17_11-39-17_646318\processed",
+    # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2023-01-18_10-44-55_646318\processed",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\2023-01-23_11-50-37_636766\processed",
+    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\2023-01-24_11-59-07_636766\processed",
+    
     ]
 
 for mm in mainPaths[:]:

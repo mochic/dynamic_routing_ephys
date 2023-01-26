@@ -171,10 +171,15 @@ def make_trial_da(good_units, spike_times, trials):
 # %%
 def plot_rasters(mainPath, trial_da, good_units, trials, templeton_rec):
     
-    # initializing substrings
-    sub1 = r"recordings"
+    if templeton_rec==True:
+        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\plots"
+        sub1 = r"recordings"
+    else:
+        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\plots"
+        sub1 = r"Task 2 pilot"
+ 
     sub2 = r"processed"
-     
+    
     # getting index of substrings
     idx1 = mainPath.index(sub1)
     idx2 = mainPath.index(sub2)
@@ -184,12 +189,6 @@ def plot_rasters(mainPath, trial_da, good_units, trials, templeton_rec):
     # getting elements in between
     for idx in range(idx1 + len(sub1) + 1, idx2):
         save_folder = save_folder + mainPath[idx]
-        
-    
-    if templeton_rec==True:
-        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\plots"
-    else:
-        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\plots"
     
     #clean this up
     save_folder_path = os.path.join(save_folder_mainPath,save_folder)
@@ -228,7 +227,7 @@ def plot_rasters(mainPath, trial_da, good_units, trials, templeton_rec):
             
             for it,tt in enumerate(sel_trials.trials.values):
                 trial_spikes = sel_trials.sel(unit_id=unit_id,trials=tt)
-
+    
                 trial_spike_times = trial_spikes.time[trial_spikes.values.astype('bool')]
                 
                 ax[si].vlines(trials['trial_stim_dur'].loc[tt],ymin=it-.01,ymax=it+1.01,linewidth=1,color='tab:blue')
@@ -269,7 +268,7 @@ def plot_rasters(mainPath, trial_da, good_units, trials, templeton_rec):
                     facecolor='auto', edgecolor='auto',
                     backend=None,
                    )
-
+    
         plt.close(fig)
     
 
@@ -277,7 +276,14 @@ def plot_rasters(mainPath, trial_da, good_units, trials, templeton_rec):
 def plot_heatmaps(mainPath,trial_da,trials,good_units,templeton_rec):    
     
     # initializing substrings
-    sub1 = r"recordings" #pilot
+    
+    if templeton_rec==True:
+        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\plots"
+        sub1 = r"recordings"
+    else:
+        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\plots"
+        sub1 = r"Task 2 pilot"
+    
     sub2 = r"processed"
      
     # getting index of substrings
@@ -289,12 +295,6 @@ def plot_heatmaps(mainPath,trial_da,trials,good_units,templeton_rec):
     # getting elements in between
     for idx in range(idx1 + len(sub1) + 1, idx2):
         save_folder = save_folder + mainPath[idx]
-        
-    
-    if templeton_rec==True:
-        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\plots"
-    else:
-        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\plots"
     
     #clean this up
     save_folder_path = os.path.join(save_folder_mainPath,save_folder)
