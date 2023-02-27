@@ -771,9 +771,9 @@ def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, startTime,
             for key in waveform_metrics.keys():
                 if key not in unitData.keys():
                     unitData[key]=[]
-                if u in waveform_metrics.index.values and key != 'epoch_name':
+                if u in waveform_metrics.index.values and key not in unit_metrics.keys():
                     unitData[key].append(waveform_metrics[key].loc[u])
-                elif key != 'epoch_name':
+                elif key not in unit_metrics.keys():
                     unitData[key].append(np.nan)
                     
             mean_waveforms[unique_unitIDs[iu]] = probe_waveforms[iu,:,:]
