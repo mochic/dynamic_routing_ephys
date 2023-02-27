@@ -60,6 +60,21 @@ def load_behavior_data(behavPath):
         trialOptoDur=f['trialOptoDur'][:nTrials]
         trialOptoOnsetFrame=f['trialOptoOnsetFrame'][:nTrials]
         trialOptoVoltage=f['trialOptoVoltage'][:nTrials]
+        galvoVoltage=f['galvoVoltage'][:nTrials]
+    
+        if 'optoRegions' in list(f.keys()):
+            optoRegions = f['optoRegions'][()]
+            trialOptoRegion = []
+            for tt in range(0,nTrials):
+                galvo_matched=0
+                for io,oo in enumerate(galvoVoltage):
+                    if np.all(trialGalvoVoltage[tt]==oo):
+                        trialOptoRegion.append(optoRegions[io])
+                        galvo_matched=1
+                        break
+                if galvo_matched==0:
+                    trialOptoRegion.append('')
+            trialOptoRegion=np.asarray(trialOptoRegion)
     
     if len(f['rotaryEncoderCount'][:])>0:
         wheelPos=(f['rotaryEncoderCount'][:]/f['rotaryEncoderCountsPerRev'][()])*(2*np.pi*f['wheelRadius'][()])*60
@@ -244,6 +259,9 @@ def load_behavior_data(behavPath):
         trials_df['trialOptoDur']=trialOptoDur
         trials_df['trialOptoOnsetFrame']=trialOptoOnsetFrame
         trials_df['trialOptoVoltage']=trialOptoVoltage
+        
+        if 'trialOptoRegion' in locals():
+            trials_df['trialOptoRegion']=trialOptoRegion
 
     return trials_df, trialSoundArray, trialSoundDur, soundSampleRate, deltaWheelPos, startTime
 
@@ -365,7 +383,9 @@ def load_sound_pilot_data(behavPath):
     }
     
     trials_df=pd.DataFrame.from_dict(trials_dict)
-        
+    
+    
+    
     f.close()
     
     
@@ -548,8 +568,9 @@ def align_trial_times(trials_df, syncData, syncPath, ephysPath, trialSoundArray,
     trials_df['stimStartTime'] = stimStartTime
     trials_df['stimLatency'] = stimLatency
     
-    if 'Unnamed: 0' in trials_df.columns:
-        trials_df = trials_df.drop(['Unnamed: 0'],axis='columns')
+    for col in trials_df.columns:
+        if 'Unnamed' in col:
+            trials_df = trials_df.drop([col],axis='columns')
     
     if len(deltaWheelPos)>0:
         frames = {
@@ -676,7 +697,7 @@ def align_rf_trial_times(rf_df, syncData, syncPath, ephysPath, rf_trialSoundArra
     return rf_df, rf_frames_df
     
 # %%
-def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, startTime):
+def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, startTime, mouseID, exp_num):
     
     # assign numbers to each probe letter name for making unique unit IDs       
     probe_num={
@@ -692,84 +713,80 @@ def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, startTime)
     unitData = {
         'id':[],
         'quality':[],
-        'peak_channel':[],
-        'waveform_duration':[], ###note: currently uses template, not actual waveform
-        # 'peakChanDepth':[],
+        'cluster_id':[],
         'probe':[],
-        'amplitude':[]
         }
     spike_times = {}
-    unit_templates = {}
+    mean_waveforms = {}
     
     # loop through probes in this recording
     for probe,dirName in zip(probeNames,probeDirNames):
         dirPath = os.path.join(ephysPath,'continuous',dirName)
         #load kilosort output for this probe
-        kilosortData = {key: np.load(os.path.join(dirPath,key+'.npy')) for key in ('spike_clusters',
-                                                                                   'spike_times',
-                                                                                   'templates',
-                                                                                   'spike_templates',
-                                                                                   'channel_positions',
-                                                                                   'amplitudes')}
+        if os.path.isfile(os.path.join(dirPath,'spike_clusters.npy')):
+            kilosortData = {key: np.load(os.path.join(dirPath,key+'.npy')) for key in ('spike_clusters',
+                                                                                       'spike_times',)}
+                                                                                       # 'templates',
+                                                                                       # 'spike_templates',
+                                                                                       # 'channel_positions',
+                                                                                       # 'amplitudes')}
+        else:
+            continue
+        
+        probe_waveforms = np.load(os.path.join(dirPath,'mean_waveforms.npy'))
+        
         # load cluster IDs
         clusterIDs = pd.read_csv(os.path.join(dirPath,'cluster_KSLabel.tsv'),sep='\t')
         # load unit metrics
-        unit_metrics = pd.read_csv(glob.glob(os.path.join(dirPath,'*metrics*.csv'))[0])
-        
+        unit_metrics = pd.read_csv(glob.glob(os.path.join(dirPath,'metrics*.csv'))[0]).set_index('cluster_id').drop(['Unnamed: 0'],axis='columns')
+        waveform_metrics = pd.read_csv(glob.glob(os.path.join(dirPath,'waveform_metrics.csv'))[0]).set_index('cluster_id').drop(['Unnamed: 0'],axis='columns')
+
         # create unique unit IDs
         unitIDs = np.unique(kilosortData['spike_clusters'])
         unique_unitIDs = unitIDs + probe_num[probe]*10000 + int(startTime[2:8]+startTime[9:11])*100000
         
-        # concat unit metrics from multiple probes
-        if probe == probeNames[0]:
-            unit_metrics_all = unit_metrics
-        else:
-            unit_metrics_all = pd.concat([unit_metrics_all,unit_metrics],axis=0)
-    
+        
+        
         for iu,u in enumerate(unitIDs):
             uind = np.where(kilosortData['spike_clusters']==u)[0]
-            u = str(u)
             unitData['id'].append(unique_unitIDs[iu]) 
-            unitData['quality'].append(clusterIDs[clusterIDs['cluster_id']==int(u)]['KSLabel'].tolist()[0])
+            unitData['cluster_id'].append(u)
+            unitData['quality'].append(clusterIDs[clusterIDs['cluster_id']==u]['KSLabel'].tolist()[0])
             
             # save aligned spike times to dictionary
             spike_times[unique_unitIDs[iu]] = kilosortData['spike_times'][uind].flatten() / syncData[probe]['sampleRate'] - syncData[probe]['shift']
-            
-            # choose 1000 spikes with replacement, then average their templates together
-            chosen_spikes = np.random.choice(uind,1000)
-            chosen_templates = kilosortData['spike_templates'][chosen_spikes].flatten()
-            unit_template = np.mean(kilosortData['templates'][chosen_templates],axis=0)
-            
-            unit_amplitude = np.median(kilosortData['amplitudes'][uind])*0.195
-            
-            unitData['amplitude'].append(unit_amplitude)
-            
-            unit_templates[unique_unitIDs[iu]]=unit_template
-            
-            peakChan = np.unravel_index(np.argmin(unit_template),unit_template.shape)[1]
-            
-            unitData['peak_channel'].append(peakChan)
-            # unitData['peakChanDepth'].append(kilosortData['channel_positions'][peakChan][1])
-            
-            template = unit_template[:,peakChan]
-            if any(np.isnan(template)):
-                unitData['waveform_duration'].append(np.nan)
-            else:
-                peakInd = np.argmin(template)
-                unitData['waveform_duration'].append(np.argmax(template[peakInd:])/(syncData[probe]['sampleRate'][0]/1000))
                 
             unitData['probe'].append(probe)
+            
+            # add unit metrics by cluster id
+            for key in unit_metrics.keys():
+                if key not in unitData.keys():
+                    unitData[key]=[]
+                if u in unit_metrics.index.values:
+                    unitData[key].append(unit_metrics[key].loc[u])
+                else:
+                    unitData[key].append(np.nan)
                 
+            # add waveform metrics by cluster id
+            for key in waveform_metrics.keys():
+                if key not in unitData.keys():
+                    unitData[key]=[]
+                if u in waveform_metrics.index.values and key != 'epoch_name':
+                    unitData[key].append(waveform_metrics[key].loc[u])
+                elif key != 'epoch_name':
+                    unitData[key].append(np.nan)
+                    
+            mean_waveforms[unique_unitIDs[iu]] = probe_waveforms[iu,:,:]
+                    
+        print(probe+' done')
+    
     # create unit dataframe
     unitData_df = pd.DataFrame.from_dict(unitData)
-    # concat with unit metrics
-    unitData_df = pd.concat([unitData_df,unit_metrics_all.reset_index()],axis=1)
     # set unit id as the dataframe index
     unitData_df = unitData_df.set_index('id')
     
-    unitData_df = unitData_df.drop(['Unnamed: 0'],axis='columns')
     
-    return unitData_df, spike_times, unit_templates
+    return unitData_df, spike_times, mean_waveforms
 
 # %%
 def load_lick_times(syncPath):
