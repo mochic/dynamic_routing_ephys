@@ -23,10 +23,10 @@ from DR_processing_utils import align_spike_times, load_lick_times
 from DR_processing_utils import load_sound_pilot_data, sync_data_streams_sound_pilot
 
 # %%
-def process_ephys_sessions(mainPath):
+def process_ephys_sessions(mainPath, mouseID, exp_num):
     
     #hack to account for RF mapping order:
-    if ('636397' in mainPath) | ('635891' in mainPath) | ('636760' in mainPath) | ('636766' in mainPath):
+    if ('636397' in mainPath) | ('635891' in mainPath) | ('636760' in mainPath) | ('636766' in mainPath) | ('644864' in mainPath):
         RF_first=True
     else:
         RF_first=False
@@ -39,7 +39,17 @@ def process_ephys_sessions(mainPath):
     behavPath = glob.glob(os.path.join(mainPath, 'DynamicRouting*.hdf5'))[0] #assumes that behavior file is the only .hdf5!
     rfPath = glob.glob(os.path.join(mainPath, 'RFMapping*.hdf5'))
     ephysPath = glob.glob(os.path.join(mainPath,'Record Node*','experiment*','recording*'))[0]
-    syncPath = glob.glob(os.path.join(mainPath, '*.h5'))[0] #assumes that sync file is the only .h5!
+    if len(ephysPath)==0:
+        ephysPath = glob.glob(os.path.join(mainPath,mouseID,'Record Node*','experiment*','recording*'))[0]
+    
+    h5syncPath = glob.glob(os.path.join(mainPath, '*.h5'))
+    syncsyncPath = glob.glob(os.path.join(mainPath, '*.sync'))
+    
+    if len(h5syncPath)>0:
+        syncPath = h5syncPath[0] #assumes that sync file is the only .h5!
+    elif len(syncsyncPath)>0:
+        syncPath = syncsyncPath[0]
+        
     processedDataPath = os.path.join(mainPath,'processed')
     
     if os.path.isdir(processedDataPath)==False:
@@ -61,7 +71,7 @@ def process_ephys_sessions(mainPath):
                                   trialSoundDur, probeNames, probeDirNames, soundSampleRate, 
                                   deltaWheelPos, RF_first)
     
-    unitData_df, spike_times, unit_templates = align_spike_times(ephysPath, syncData, probeNames, probeDirNames, startTime)
+    unitData_df, spike_times, mean_waveforms = align_spike_times(ephysPath, syncData, probeNames, probeDirNames, startTime, mouseID, exp_num)
     
     lick_times = load_lick_times(syncPath)
             
@@ -78,7 +88,7 @@ def process_ephys_sessions(mainPath):
     
     ##Save individual files for each type of data
     np.save(os.path.join(processedDataPath,'spike_times_aligned.npy'),spike_times,allow_pickle=True)
-    np.save(os.path.join(processedDataPath,'unit_templates.npy'),unit_templates,allow_pickle=True)
+    np.save(os.path.join(processedDataPath,'mean_waveforms.npy'),mean_waveforms,allow_pickle=True)
     np.save(os.path.join(processedDataPath,'lick_times.npy'),lick_times,allow_pickle=True)
     
     unitData_df.to_csv(os.path.join(processedDataPath,'unit_table.csv'))
@@ -88,30 +98,63 @@ def process_ephys_sessions(mainPath):
 # %% run loop on experiment folders
 
 mainPaths = [
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\2022-08-15_11-22-28_626791",
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\2022-08-16_12-43-07_626791",
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\2022-08-17_13-25-06_626791",
-    # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-07-26_14-09-36_620263",
-    # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-07-27_13-57-17_620263",
-    # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-08-02_15-40-19_620264",
-    # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-09-19_13-48-26_628801",
-    # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-09-26_12-48-09_636397",
-    # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-09-27_11-37-08_636397",
+    #sound pilot
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\625820_06222022\2022-06-22_14-25-10",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\625821_07112022\2022-07-11_14-42-15",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\625821_07122022\2022-07-12_13-51-39",
+    
+    #opto pilot
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\opto pilot\2022-11-07_12-31-20_635891",
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\opto pilot\2022-11-08_11-03-58_635891",
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\opto pilot\2022-11-14_13-18-05_636760", #error w/ vsync/photodiode?
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\opto pilot\2022-11-15_14-02-31_636760", #error w/ vsync/photodiode?
-    # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-12-05_13-08-02_644547",
-    # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-12-06_12-35-35_644547",
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\625820_06222022\2022-06-22_14-25-10",
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\625821_07112022\2022-07-11_14-42-15",
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\625821_07122022\2022-07-12_13-51-39",
-    # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2023-01-17_11-39-17_646318",
-    # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2023-01-18_10-44-55_646318",
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\2023-01-23_11-50-37_636766",
-    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\2023-01-24_11-59-07_636766"
+    
+    #templeton pilot
+    r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-07-26_14-09-36_620263",
+    r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-07-27_13-57-17_620263",
+    r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-08-02_15-40-19_620264",
+    r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-09-19_13-48-26_628801",
+    r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-09-26_12-48-09_636397",
+    r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-09-27_11-37-08_636397",
+    r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-12-05_13-08-02_644547",
+    r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-12-06_12-35-35_644547",
+    r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2023-01-17_11-39-17_646318",
+    r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2023-01-18_10-44-55_646318",
+    
+    #DR pilot
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220815",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220816",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220817",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230123",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230124",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230125",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230201",
     ]
 
-for mm in mainPaths[:]:
-    process_ephys_sessions(mm)
+exp_nums = [
+    #sound pilot
+    # 1, #625820
+    # 1,2, #625821
+    
+    #opto pilot
+    # 1,2, #635891
+    # 1,2, #636760
+    
+    #templeton pilot
+    1,2, #620263
+    1, #620264
+    1, #628801
+    1,2, #636397
+    1,2, #644547
+    1,2, #646318
+    
+    #DR pilot
+    # 1,2,3, #626791
+    # 1,2,3, #636766
+    # 3 #644864
+    ]
+
+for im,mm in enumerate(mainPaths[:]):
+    mouseID=mm[-6:]
+    process_ephys_sessions(mm, mouseID, exp_nums[im])
     
