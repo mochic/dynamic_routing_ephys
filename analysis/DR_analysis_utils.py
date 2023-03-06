@@ -33,10 +33,12 @@ class Session:
         session.lick_times: list of all recorded lick times during the session
         session.frames: table with time of each frame, along with running speed
     '''
-    def __init__(self,params=None,path=None):
+    def __init__(self,params=None,path=None,mouseID=None,ephys_session_num=None):
         
-        #mouseID
-        self.mouseID=[x for x in path.split('_') if len(x)==6 and x.isdigit()][0]
+        #load metadata
+        ### TO-DO!
+        self.mouseID=mouseID
+        self.ephys_session_num=ephys_session_num
         
         #load trials
         self.trials=pd.read_csv(os.path.join(path,'trials_table.csv'))
@@ -66,9 +68,9 @@ class Session:
         self.units=self.units.set_index('id')
 
         self.good_units=self.units.query('quality == "good" and \
-                        isi_viol < 0.5 and \
-                        amplitude_cutoff < 0.1 and \
-                        presence_ratio > 0.95')
+                                            isi_viol < 0.5 and \
+                                            amplitude_cutoff < 0.1 and \
+                                            presence_ratio > 0.95')
         self.good_units=self.good_units.sort_values(by=['probe','peak_channel'])
         
         #load spike times
@@ -84,9 +86,9 @@ class Session:
             #load RF frames
             self.rf_frames=pd.read_csv(os.path.join(path,'rf_mapping_frames.csv'))
         
-    def assign_unit_areas(self,ephys_session_num=None):
+    def assign_unit_areas(self):
         #check for area IDs
-        self.ephys_session_num=ephys_session_num
+
         tissuecyte_path = r"\\allen\programs\mindscope\workgroups\np-behavior\tissuecyte"
         self.units['area']=''
         self.good_units['area']=''
@@ -95,7 +97,7 @@ class Session:
                 if type(probe)==str:
                     channels_table_path=glob.glob(
                         os.path.join(tissuecyte_path,self.mouseID,
-                                     '*'+probe+str(ephys_session_num)+'_channels*'))
+                                     '*'+probe+str(self.ephys_session_num)+'_channels*'))
                     if len(channels_table_path)==1:
                         channels_table=pd.read_csv(channels_table_path[0])
                         print('probe'+probe+' areas found')
