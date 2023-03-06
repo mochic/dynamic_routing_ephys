@@ -392,7 +392,7 @@ def load_sound_pilot_data(behavPath):
     return trials_df, trialSoundArray, trialSoundDur, soundSampleRate, deltaWheelPos, startTime
 
 # %%
-def sync_data_streams(syncPath,ephysPath):
+def sync_data_streams(syncPath,ephysPath,nidaqPath):
     
     # get sync data
     syncDataset = sync.Dataset(syncPath)
@@ -400,17 +400,17 @@ def sync_data_streams(syncPath,ephysPath):
     syncBarcodeTimes,syncBarcodes = ecephys.extract_barcodes_from_times(syncBarcodeRising,syncBarcodeFalling)
     
     # find probe & nidaq directory names
-    probeDirNames = [pr for pr in os.listdir(os.path.join(ephysPath,'continuous')) if '-AP' in pr]
+    probeDirNames = ephysPath 
     probeNames = [pr[-4] for pr in probeDirNames]
-    nidaqDirName = [pr for pr in os.listdir(os.path.join(ephysPath,'continuous')) if 'NI-DAQmx' in pr]
+    nidaqDirName = nidaqPath 
     
     syncData = {key: {'dirName': dirName} for key,dirName in zip(probeNames+['nidaq'],probeDirNames+nidaqDirName)}
     
     # find probe and nidaq offsets and sample rates
     ephysSampleRate = 30000
     for key,d in syncData.items():
-        datTimestampsPath = os.path.join(ephysPath,'continuous',d['dirName'],'sample_numbers.npy')
-        ttlStatesPath = os.path.join(ephysPath,'events',d['dirName'],'TTL','states.npy')
+        datTimestampsPath = os.path.join(d['dirName'],'sample_numbers.npy')
+        ttlStatesPath = os.path.join(d['dirName'].replace('continuous','events'),'TTL','states.npy')
         ttlTimestampsPath = os.path.join(os.path.dirname(ttlStatesPath),'sample_numbers.npy')
         
         datTimestamps = np.load(datTimestampsPath)/ephysSampleRate
@@ -432,7 +432,7 @@ def sync_data_streams(syncPath,ephysPath):
     return syncData, probeNames, probeDirNames
 
 # %%
-def sync_data_streams_sound_pilot(syncPath,ephysPath):
+def sync_data_streams_sound_pilot(syncPath,ephysPath,nidaqPath):
     
     syncDataset = sync.Dataset(syncPath)
 
@@ -441,17 +441,17 @@ def sync_data_streams_sound_pilot(syncPath,ephysPath):
     syncBarcodeTimes,syncBarcodes = ecephys.extract_barcodes_from_times(syncBarcodeRising,syncBarcodeFalling)
     
     # find probe & nidaq directory names
-    probeDirNames = [pr for pr in os.listdir(os.path.join(ephysPath,'continuous')) if '-AP' in pr]
+    probeDirNames = ephysPath 
     probeNames = [pr[-4] for pr in probeDirNames]
-    nidaqDirName = [pr for pr in os.listdir(os.path.join(ephysPath,'continuous')) if 'NI-DAQmx' in pr]
+    nidaqDirName = nidaqPath 
     
     syncData = {key: {'dirName': dirName} for key,dirName in zip(probeNames+['nidaq'],probeDirNames+nidaqDirName)}
-    
+
     
     ephysSampleRate = 30000
     for key,d in syncData.items():
-        datTimestampsPath = os.path.join(ephysPath,'continuous',d['dirName'],'timestamps.npy')#'timestamps.npy')
-        ttlStatesPath = os.path.join(ephysPath,'events',d['dirName'],'TTL','channel_states.npy')
+        datTimestampsPath = os.path.join(d['dirName'],'timestamps.npy')#'timestamps.npy')
+        ttlStatesPath = os.path.join(d['dirName'].replace('continuous','events'),'TTL','channel_states.npy')
         ttlTimestampsPath = os.path.join(os.path.dirname(ttlStatesPath),'timestamps.npy')#'timestamps.npy')
     
         datTimestamps = np.load(datTimestampsPath)/ephysSampleRate
@@ -473,13 +473,10 @@ def sync_data_streams_sound_pilot(syncPath,ephysPath):
     return syncData, probeNames, probeDirNames
 
 # %%
-def align_trial_times(trials_df, syncData, syncPath, ephysPath, trialSoundArray, 
-                      trialSoundDur, probeNames, probeDirNames, soundSampleRate,
-                      deltaWheelPos, RF_first):
+def align_trial_times(trials_df, syncData, syncPath, nidaqPath, trialSoundArray, 
+                      trialSoundDur, soundSampleRate, deltaWheelPos, RF_first):
     
     syncDataset = sync.Dataset(syncPath)
-    
-    ### check for the 'stimulus_on' sync line!
     
     #load vsyncs
     vsyncRising,vsyncFalling = probeSync.get_sync_line_data(syncDataset,'vsync_stim')
@@ -527,7 +524,8 @@ def align_trial_times(trials_df, syncData, syncPath, ephysPath, trialSoundArray,
     stimStartFrame = trials_df['trialStimStartFrame']
     
     #find stimulus latencies
-    nidaqDatPath = os.path.join(ephysPath,'continuous',syncData['nidaq']['dirName'],'continuous.dat')
+    
+    nidaqDatPath = os.path.join(nidaqPath[0],'continuous.dat')
     
     numAnalogCh = 8
     nidaqData = np.memmap(nidaqDatPath,dtype='int16',mode='r')    
@@ -564,6 +562,10 @@ def align_trial_times(trials_df, syncData, syncPath, ephysPath, trialSoundArray,
             
         else:
             stimStartTime[trial] = startTime
+        
+        #progress printout?
+        if (trial % 100) == 0:
+            print(trial,r"/",len(trialStim)," task trials aligned")
             
     trials_df['stimStartTime'] = stimStartTime
     trials_df['stimLatency'] = stimLatency
@@ -589,7 +591,7 @@ def align_trial_times(trials_df, syncData, syncPath, ephysPath, trialSoundArray,
     return trials_df, frames_df
 
 # %%
-def align_rf_trial_times(rf_df, syncData, syncPath, ephysPath, rf_trialSoundArray, 
+def align_rf_trial_times(rf_df, syncData, syncPath, nidaqPath, rf_trialSoundArray, 
                          rf_soundDur, soundSampleRate, rf_deltaWheelPos, RF_first):
     
     syncDataset = sync.Dataset(syncPath)
@@ -639,7 +641,7 @@ def align_rf_trial_times(rf_df, syncData, syncPath, ephysPath, rf_trialSoundArra
     stimStartFrame = rf_df['stimStartFrame']
     
     #find stimulus latencies
-    nidaqDatPath = os.path.join(ephysPath,'continuous',syncData['nidaq']['dirName'],'continuous.dat')
+    nidaqDatPath = os.path.join(nidaqPath[0],'continuous.dat')
     
     numAnalogCh = 8
     nidaqData = np.memmap(nidaqDatPath,dtype='int16',mode='r')    
@@ -676,6 +678,10 @@ def align_rf_trial_times(rf_df, syncData, syncPath, ephysPath, rf_trialSoundArra
     
         else:
             stimStartTime[trial] = startTime
+        
+        #progress printout?
+        if (trial % 100) == 0:
+            print(trial,r"/",len(trialStim)," RF trials aligned")
     
     rf_df['stimStartTime'] = stimStartTime
     rf_df['stimLatency'] = stimLatency
@@ -697,7 +703,7 @@ def align_rf_trial_times(rf_df, syncData, syncPath, ephysPath, rf_trialSoundArra
     return rf_df, rf_frames_df
     
 # %%
-def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, startTime, mouseID, exp_num):
+def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, kilosortPath, startTime, mouseID, exp_num):
     
     # assign numbers to each probe letter name for making unique unit IDs       
     probe_num={
@@ -719,11 +725,24 @@ def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, startTime,
     spike_times = {}
     mean_waveforms = {}
     
+    
     # loop through probes in this recording
     for probe,dirName in zip(probeNames,probeDirNames):
-        dirPath = os.path.join(ephysPath,'continuous',dirName)
+        
+        dirPath=[]
+        KSdirPath=[]
+        
+        for kk in kilosortPath:
+            if 'probe'+probe in kk:
+                KSdirName=kk
+
+        if os.path.isfile(os.path.join(dirName,'spike_clusters.npy')):
+            dirPath = dirName #os.path.join(ephysPath,'continuous',dirName)
+        elif os.path.isfile(os.path.join(KSdirName,'spike_clusters.npy')):
+            dirPath = KSdirName
+        
         #load kilosort output for this probe
-        if os.path.isfile(os.path.join(dirPath,'spike_clusters.npy')):
+        if len(dirPath)>0:
             kilosortData = {key: np.load(os.path.join(dirPath,key+'.npy')) for key in ('spike_clusters',
                                                                                        'spike_times',)}
                                                                                        # 'templates',
@@ -738,9 +757,13 @@ def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, startTime,
         # load cluster IDs
         clusterIDs = pd.read_csv(os.path.join(dirPath,'cluster_KSLabel.tsv'),sep='\t')
         # load unit metrics
-        unit_metrics = pd.read_csv(glob.glob(os.path.join(dirPath,'metrics*.csv'))[0]).set_index('cluster_id').drop(['Unnamed: 0'],axis='columns')
-        waveform_metrics = pd.read_csv(glob.glob(os.path.join(dirPath,'waveform_metrics.csv'))[0]).set_index('cluster_id').drop(['Unnamed: 0'],axis='columns')
-
+        unit_metrics = pd.read_csv(glob.glob(os.path.join(dirPath,'metrics*.csv'))[0]).set_index('cluster_id')
+        if 'Unnamed: 0' in unit_metrics.columns:
+            unit_metrics.drop(['Unnamed: 0'],axis='columns')
+        waveform_metrics = pd.read_csv(glob.glob(os.path.join(dirPath,'waveform_metrics.csv'))[0]).set_index('cluster_id')
+        if 'Unnamed: 0' in waveform_metrics.columns:
+            waveform_metrics.drop(['Unnamed: 0'],axis='columns')
+        
         # create unique unit IDs
         unitIDs = np.unique(kilosortData['spike_clusters'])
         unique_unitIDs = unitIDs + probe_num[probe]*10000 + int(startTime[2:8]+startTime[9:11])*100000
@@ -751,7 +774,7 @@ def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, startTime,
             uind = np.where(kilosortData['spike_clusters']==u)[0]
             unitData['id'].append(unique_unitIDs[iu]) 
             unitData['cluster_id'].append(u)
-            unitData['quality'].append(clusterIDs[clusterIDs['cluster_id']==u]['KSLabel'].tolist()[0])
+            # unitData['quality'].append(clusterIDs[clusterIDs['cluster_id']==u]['KSLabel'].tolist()[0])
             
             # save aligned spike times to dictionary
             spike_times[unique_unitIDs[iu]] = kilosortData['spike_times'][uind].flatten() / syncData[probe]['sampleRate'] - syncData[probe]['shift']
@@ -778,7 +801,7 @@ def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, startTime,
                     
             mean_waveforms[unique_unitIDs[iu]] = probe_waveforms[iu,:,:]
                     
-        print(probe+' done')
+        print(probe+' unit processing done')
     
     # create unit dataframe
     unitData_df = pd.DataFrame.from_dict(unitData)
@@ -797,4 +820,21 @@ def load_lick_times(syncPath):
     
     return lick_times
 
+# %%
+def define_RF_first(mouseID):
+    
+    RF_last_mice = ['626791','628801','644547','646318','625820','625821',]
+    
+    if mouseID in RF_last_mice:
+        RF_first=False
+    else:
+        RF_first=True
+        
+    return RF_first
+    
+    # if mouseID in (('636397' in mainPath) | ('635891' in mainPath) | ('636760' in mainPath) | 
+    #     ('636766' in mainPath) | ('644864' in mainPath) | ('649944' in mainPath)):
+    #     RF_first=True
+    # else:
+    #     RF_first=False
 
