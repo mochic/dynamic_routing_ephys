@@ -35,6 +35,9 @@ class Session:
     '''
     def __init__(self,params=None,path=None):
         
+        #mouseID
+        self.mouseID=[x for x in path.split('_') if len(x)==6 and x.isdigit()][0]
+        
         #load trials
         self.trials=pd.read_csv(os.path.join(path,'trials_table.csv'))
         trial_stim_dur=np.zeros(len(self.trials))
@@ -61,6 +64,7 @@ class Session:
         #load units
         self.units=pd.read_csv(os.path.join(path,'unit_table.csv'))
         self.units=self.units.set_index('id')
+
         self.good_units=self.units.query('quality == "good" and \
                         isi_viol < 0.5 and \
                         amplitude_cutoff < 0.1 and \
@@ -80,7 +84,50 @@ class Session:
             #load RF frames
             self.rf_frames=pd.read_csv(os.path.join(path,'rf_mapping_frames.csv'))
         
+    def assign_unit_areas(self,ephys_session_num=None):
+        #check for area IDs
+        self.ephys_session_num=ephys_session_num
+        tissuecyte_path = r"\\allen\programs\mindscope\workgroups\np-behavior\tissuecyte"
+        self.units['area']=''
+        self.good_units['area']=''
+        if os.path.isdir(os.path.join(tissuecyte_path,self.mouseID)):
+            for probe in self.units['probe'].unique():
+                if type(probe)==str:
+                    channels_table_path=glob.glob(
+                        os.path.join(tissuecyte_path,self.mouseID,
+                                     '*'+probe+str(ephys_session_num)+'_channels*'))
+                    if len(channels_table_path)==1:
+                        channels_table=pd.read_csv(channels_table_path[0])
+                        print('probe'+probe+' areas found')
+                    else:
+                        print('probe'+probe+' areas not found')
+                        continue
+                    for ic,chan in channels_table.iterrows():
+                        chan_units = self.units.query('peak_channel == @chan.channel and \
+                                                            probe == @probe').index
+                        if len(chan_units)>0:
+                            if 'region' in chan:
+                                assign_area = chan['region']
+                            elif 'channel_areas' in chan:
+                                assign_area = chan['channel_areas']
+                            self.units.loc[chan_units,'area'] = assign_area
+                        
+                        
+                        chan_units = self.good_units.query('peak_channel == @chan.channel and \
+                                                                    probe == @probe').index
+                        if len(chan_units)>0:
+                            if 'region' in chan:
+                                assign_area = chan['region']
+                            elif 'channel_areas' in chan:
+                                assign_area = chan['channel_areas']
+                            self.good_units.loc[chan_units,'area'] = assign_area
         
+            self.units.loc[self.units['area'].isna(),'area']='N/A'
+            self.good_units.loc[self.good_units['area'].isna(),'area']='N/A'
+        
+        else:
+            print('tissuecyte folder not found')
+
 
 # functions for binning the spiking data into a convenient shape for plotting
 def makePSTH(spikes, startTimes, windowDur, binSize=0.001):
