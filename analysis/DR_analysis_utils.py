@@ -14,6 +14,7 @@ import pandas as pd
 import xarray as xr
 import matplotlib.pyplot as plt
 from matplotlib import patches
+import pickle
 import os
 import glob
 
@@ -36,12 +37,18 @@ class Session:
     def __init__(self,params=None,path=None,mouseID=None,ephys_session_num=None):
         
         #load metadata
-        ### TO-DO!
-        self.mouseID=mouseID
-        self.ephys_session_num=ephys_session_num
+        if os.path.isfile(os.path.join(path,'metadata.pkl')):
+            with open(os.path.join(path,'metadata.pkl'), 'rb') as handle:
+                self.metadata = pickle.load(handle)
+        elif mouseID is not None and ephys_session_num is not None:
+            self.metadata={}
+            self.metadata['mouseID']=mouseID
+            self.metadata['ephys_session_num']=ephys_session_num
+        else:
+            print('metadata not found, input mouseID and ephys_session_num')
         
         #load trials
-        self.trials=pd.read_csv(os.path.join(path,'trials_table.csv'))
+        self.trials=pd.read_csv(os.path.join(path,'trials_table.csv'),index_col=[0])
         trial_stim_dur=np.zeros(len(self.trials))
         for tt in range(0,len(self.trials)):
             if 'trial_sound_dur' in self.trials.columns:
@@ -64,8 +71,9 @@ class Session:
         self.lick_times=self.lick_times[0]
         
         #load units
-        self.units=pd.read_csv(os.path.join(path,'unit_table.csv'))
-        self.units=self.units.set_index('id')
+        self.units=pd.read_csv(os.path.join(path,'unit_table.csv'),index_col='id')
+        if 'Unnamed: 0' in self.units.columns:
+            self.units = self.units.drop(['Unnamed: 0'],axis='columns')
 
         self.good_units=self.units.query('quality == "good" and \
                                             isi_viol < 0.5 and \
@@ -77,14 +85,14 @@ class Session:
         self.spike_times=np.load(os.path.join(path,'spike_times_aligned.npy'),allow_pickle=True).item()
         
         #load frames
-        self.frames=pd.read_csv(os.path.join(path,'frames_table.csv'))
+        self.frames=pd.read_csv(os.path.join(path,'frames_table.csv'),index_col=[0])
         
         if len(glob.glob(os.path.join(path, 'rf_mapping*')))>0:
             #load RF mapping
-            self.rf_trials=pd.read_csv(os.path.join(path,'rf_mapping_trials.csv'))
+            self.rf_trials=pd.read_csv(os.path.join(path,'rf_mapping_trials.csv'),index_col=[0])
             
             #load RF frames
-            self.rf_frames=pd.read_csv(os.path.join(path,'rf_mapping_frames.csv'))
+            self.rf_frames=pd.read_csv(os.path.join(path,'rf_mapping_frames.csv'),index_col=[0])
         
     def assign_unit_areas(self):
         #check for area IDs
@@ -92,12 +100,12 @@ class Session:
         tissuecyte_path = r"\\allen\programs\mindscope\workgroups\np-behavior\tissuecyte"
         self.units['area']=''
         self.good_units['area']=''
-        if os.path.isdir(os.path.join(tissuecyte_path,self.mouseID)):
+        if os.path.isdir(os.path.join(tissuecyte_path,self.metadata['mouseID'])):
             for probe in self.units['probe'].unique():
                 if type(probe)==str:
                     channels_table_path=glob.glob(
-                        os.path.join(tissuecyte_path,self.mouseID,
-                                     '*'+probe+str(self.ephys_session_num)+'_channels*'))
+                        os.path.join(tissuecyte_path,self.metadata['mouseID'],
+                                     '*'+probe+str(self.metadata['ephys_session_num'])+'_channels*'))
                     if len(channels_table_path)==1:
                         channels_table=pd.read_csv(channels_table_path[0])
                         print('probe'+probe+' areas found')

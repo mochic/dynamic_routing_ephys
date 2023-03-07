@@ -571,7 +571,7 @@ def align_trial_times(trials_df, syncData, syncPath, nidaqPath, trialSoundArray,
     trials_df['stimLatency'] = stimLatency
     
     for col in trials_df.columns:
-        if 'Unnamed' in col:
+        if 'Unnamed:' in col:
             trials_df = trials_df.drop([col],axis='columns')
     
     if len(deltaWheelPos)>0:
@@ -755,14 +755,14 @@ def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, kilosortPa
         probe_waveforms = np.load(os.path.join(dirPath,'mean_waveforms.npy'))
         
         # load cluster IDs
-        clusterIDs = pd.read_csv(os.path.join(dirPath,'cluster_KSLabel.tsv'),sep='\t')
+        # clusterIDs = pd.read_csv(os.path.join(dirPath,'cluster_KSLabel.tsv'),sep='\t')
         # load unit metrics
         unit_metrics = pd.read_csv(glob.glob(os.path.join(dirPath,'metrics*.csv'))[0]).set_index('cluster_id')
         if 'Unnamed: 0' in unit_metrics.columns:
-            unit_metrics.drop(['Unnamed: 0'],axis='columns')
+            unit_metrics = unit_metrics.drop(['Unnamed: 0'],axis='columns')
         waveform_metrics = pd.read_csv(glob.glob(os.path.join(dirPath,'waveform_metrics.csv'))[0]).set_index('cluster_id')
         if 'Unnamed: 0' in waveform_metrics.columns:
-            waveform_metrics.drop(['Unnamed: 0'],axis='columns')
+            waveform_metrics = waveform_metrics.drop(['Unnamed: 0'],axis='columns')
         
         # create unique unit IDs
         unitIDs = np.unique(kilosortData['spike_clusters'])
@@ -808,6 +808,9 @@ def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, kilosortPa
     # set unit id as the dataframe index
     unitData_df = unitData_df.set_index('id')
     
+    for col in unitData_df.columns:
+        if 'Unnamed:' in col:
+            unitData_df = unitData_df.drop([col],axis='columns')
     
     return unitData_df, spike_times, mean_waveforms
 
