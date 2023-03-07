@@ -755,7 +755,7 @@ def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, kilosortPa
         probe_waveforms = np.load(os.path.join(dirPath,'mean_waveforms.npy'))
         
         # load cluster IDs
-        # clusterIDs = pd.read_csv(os.path.join(dirPath,'cluster_KSLabel.tsv'),sep='\t')
+        clusterIDs = pd.read_csv(os.path.join(dirPath,'cluster_KSLabel.tsv'),sep='\t')
         # load unit metrics
         unit_metrics = pd.read_csv(glob.glob(os.path.join(dirPath,'metrics*.csv'))[0]).set_index('cluster_id')
         if 'Unnamed: 0' in unit_metrics.columns:
@@ -774,7 +774,8 @@ def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, kilosortPa
             uind = np.where(kilosortData['spike_clusters']==u)[0]
             unitData['id'].append(unique_unitIDs[iu]) 
             unitData['cluster_id'].append(u)
-            # unitData['quality'].append(clusterIDs[clusterIDs['cluster_id']==u]['KSLabel'].tolist()[0])
+            if 'quality' not in unit_metrics.columns:
+                unitData['quality'].append(clusterIDs[clusterIDs['cluster_id']==u]['KSLabel'].tolist()[0])
             
             # save aligned spike times to dictionary
             spike_times[unique_unitIDs[iu]] = kilosortData['spike_times'][uind].flatten() / syncData[probe]['sampleRate'] - syncData[probe]['shift']
@@ -826,7 +827,8 @@ def load_lick_times(syncPath):
 # %%
 def define_RF_first(mouseID):
     
-    RF_last_mice = ['626791','628801','644547','646318','625820','625821',]
+    RF_last_mice = ['620263','620264','626791','628801','644547','646318',
+                    '625820','625821',]
     
     if mouseID in RF_last_mice:
         RF_first=False

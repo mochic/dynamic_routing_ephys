@@ -12,6 +12,7 @@ Created on Mon Jan  9 11:16:14 2023
 import numpy as np
 import pandas as pd
 import xarray as xr
+import scipy.signal as sg
 import matplotlib.pyplot as plt
 from matplotlib import patches
 import pickle
@@ -27,12 +28,15 @@ class Session:
         path: full path to data processed by DR_processing_script
     OUTPUT:
         session object containing all relevant session data
+        session.metadata: metadata about the session
         session.trials: pandas DataFrame with information about each trial
         session.units: DataFrame with info about each unit
         session.good_units: DataFrame with info about units, filtered by quality metrics
         session.spike_times: dictionary of spike times, with each key corresponding to a unit_id in the units table
         session.lick_times: list of all recorded lick times during the session
         session.frames: table with time of each frame, along with running speed
+        session.rf_trials: DataFrame with info about RF mapping trials
+        session.rf_frames: table with time of each RF frame, along with running speed
     '''
     def __init__(self,params=None,path=None,mouseID=None,ephys_session_num=None):
         

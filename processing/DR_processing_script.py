@@ -43,15 +43,16 @@ def process_ephys_sessions(mainPath, mouseID, exp_num, session_date, metadata_on
     behavPath = glob.glob(os.path.join(mainPath, 'DynamicRouting*.hdf5'))[0] #assumes that behavior file is the only .hdf5!
     rfPath = glob.glob(os.path.join(mainPath, 'RFMapping*.hdf5'))
     ephysPath = glob.glob(os.path.join(mainPath,'Record Node*','experiment*','recording*','continuous','*-AP'))
+    nidaqPath = glob.glob(os.path.join(mainPath,'Record Node*','experiment*','recording*','continuous','NI-DAQmx*'))
     if len(ephysPath)==0:
         ephysPath = glob.glob(os.path.join(mm,'*_'+mouseID+'*','Record Node*','experiment*','recording*','continuous','*-AP'))#[0]
+        nidaqPath = glob.glob(os.path.join(mm,'*_'+mouseID+'*','Record Node*','experiment*','recording*','continuous','NI-DAQmx*'))
         
     if os.path.isfile(os.path.join(ephysPath[0],'spike_clusters.npy')):
         kilosortPath = glob.glob(os.path.join(mainPath,'Record Node*','experiment*','recording*','continuous','*-AP'))
     else:
         kilosortPath = glob.glob(os.path.join(datajointPath,'*'+mouseID+'_'+session_date,'*probe*_sorted','continuous','Neuropix-PXI-100.0'))
     
-    nidaqPath = glob.glob(os.path.join(mm,'*_'+mouseID+'*','Record Node*','experiment*','recording*','continuous','NI-DAQmx*'))
     syncPath = glob.glob(os.path.join(mainPath, '*.h5'))[0] #assumes that sync file is the only .h5!
     processedDataPath = os.path.join(mainPath,'processed')
     
