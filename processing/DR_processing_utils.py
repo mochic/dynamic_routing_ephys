@@ -731,6 +731,7 @@ def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, kilosortPa
         
         dirPath=[]
         KSdirPath=[]
+        KSdirName='asdf'
         
         for kk in kilosortPath:
             if 'probe'+probe in kk:
