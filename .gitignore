@@ -1,2 +1,3 @@
-*.pyc
+*/processing/__pychache__/*
+*/analysis/__pychache__/*
 */.ipynb_checkpoints/*
