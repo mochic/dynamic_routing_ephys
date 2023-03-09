@@ -718,4 +718,248 @@ def plot_rew_nonrew_rasters(mainPath, trial_da, good_units, spike_times, trials,
 
         plt.close(fig)
         
+#%%
+def plot_stim_vs_lick_aligned_rasters(session, mainPath, templeton_rec):
     
+    if templeton_rec==True:
+        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\plots"
+        sub1 = r"recordings"
+    else:
+        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\plots"
+        sub1 = r"Task 2 pilot"
+ 
+    sub2 = r"processed"
+    
+    # getting index of substrings
+    idx1 = mainPath.index(sub1)
+    idx2 = mainPath.index(sub2)
+     
+    save_folder = ''
+    
+    # getting elements in between
+    for idx in range(idx1 + len(sub1) + 1, idx2):
+        save_folder = save_folder + mainPath[idx]
+    
+    #clean this up
+    save_folder_path = os.path.join(save_folder_mainPath,save_folder)
+    
+    if os.path.isdir(save_folder_path)==False:
+            os.mkdir(save_folder_path)
+            
+    save_folder_path = os.path.join(save_folder_path,'rasters_stim_vs_lick_aligned')
+    
+    if os.path.isdir(save_folder_path)==False:
+            os.mkdir(save_folder_path)
+            
+    # find first licks after stimulus start
+    first_lick_time=np.zeros(len(session.trials))
+    first_lick_time[:]=np.nan
+    for tt in range(0,len(session.trials)):
+        if tt<len(session.trials)-1:
+            first_lick=np.where((session.lick_times>session.trials['stimStartTime'].iloc[tt])&
+                                (session.lick_times<session.trials['stimStartTime'].iloc[tt+1]))[0]
+        else:
+            first_lick=np.where((session.lick_times>session.trials['stimStartTime'].iloc[tt]))[0]
+        
+        if len(first_lick)>0:
+            first_lick_time[tt]=session.lick_times[first_lick[0]]        
+    session.trials['first_lick_time']=first_lick_time
+    session.trials['first_lick_latency']=session.trials['first_lick_time']-session.trials['stimStartTime']
+    
+    #split trials with response vs not
+    response_trials = session.trials.query('trial_response == True')
+    non_response_trials = session.trials.query('trial_response == False')
+    
+    #sort by stimulus, first lick latency
+    response_trials_sorted = response_trials.sort_values(by=['trialStimID','first_lick_latency'])
+    non_response_trials_sorted = non_response_trials.sort_values(by=['trialStimID'])
+    
+    
+    #make a dataframe with 'first_lick_time' relabeled as 'start_time' so the tensor function likes it
+    first_lick_df=response_trials['first_lick_time']
+    first_lick_df=pd.DataFrame(first_lick_df)
+    first_lick_df=first_lick_df.rename(columns={"first_lick_time": "start_time"})
+    
+    # loop through sessions and make unit xarray
+    time_before_flash = 1.0
+    trial_duration = 3
+    bin_size = 0.001
+    # Make tensor (3-D matrix [units,time,trials])
+    trial_tensor = make_neuron_time_trials_tensor(session.good_units, session.spike_times, 
+                                                  first_lick_df, time_before_flash, trial_duration, 
+                                                  bin_size)
+    # make xarray
+    lick_aligned_da = xr.DataArray(trial_tensor, dims=("unit_id", "time", "trials"), 
+                               coords={
+                                   "unit_id": session.good_units.index.values,
+                                   "time": np.arange(0, trial_duration, bin_size)-time_before_flash,
+                                   "trials": first_lick_df.index.values
+                                   })
+        
+    
+    #plot stim-aligned rasters with lick time indicated
+    for unit_id in session.good_units.index:
+        
+        fig_name = 'unit'+str(unit_id)+'_'+session.good_units['area'].loc[unit_id]+'_stim_aligned'
+        
+        fig,ax=plt.subplots(1,2,figsize=(10,7))
+        ax=ax.flatten()
+        
+        # stim_types=['vis1','vis2','sound1','sound2','catch']
+        stim_types=['catch','sound2','sound1','vis2','vis1',]
+        
+        for xx in range(0,2):
+            ax[xx].axvline(0,linewidth=1)
+            ax[xx].axvline(0.5,linewidth=1)
+            
+            trialcount_offset=0
+            stim_trial_borders=[0]
+        
+            for si,ss in enumerate(stim_types):
+                
+                if xx==0:
+                    stim_trials = response_trials_sorted.query('trialStimID == @ss')
+                elif xx==1:
+                    stim_trials = non_response_trials_sorted.query('trialStimID == @ss')
+                    
+                sel_trials = session.trial_da.sel(trials=stim_trials.index.values)
+        
+                for it,tt in enumerate(sel_trials.trials.values):
+                    trial_spikes = sel_trials.sel(unit_id=unit_id,trials=tt)
+                    trial_spike_times = trial_spikes.time[trial_spikes.values.astype('bool')]
+                    ax[xx].vlines(trial_spike_times,ymin=it+trialcount_offset,ymax=it+1+trialcount_offset,linewidth=0.75,color='k')
+        
+                    if stim_trials['trialStimID'].loc[tt] == stim_trials['trialstimRewarded'].loc[tt]:
+                        plot_color='g'
+                    else:
+                        plot_color='r'
+                    
+                    if xx==0:
+                        ax[xx].vlines(stim_trials['first_lick_latency'].loc[tt],ymin=it-.01+trialcount_offset,
+                                  ymax=it+1.01+trialcount_offset,linewidth=2,color=plot_color)
+                ax[xx].axhline(trialcount_offset,color='k',linewidth=0.5)
+                trialcount_offset=trialcount_offset+len(stim_trials)
+                stim_trial_borders.append(trialcount_offset)
+        
+            stim_trial_borders=np.asarray(stim_trial_borders)
+            stim_trial_midpoints=stim_trial_borders[:-1]+(stim_trial_borders[1:]-stim_trial_borders[:-1])/2
+        
+            for yy in np.asarray([1,3]):
+                start_iloc=stim_trial_borders[yy]
+                if (yy+1)>(len(stim_trial_borders)-1):
+                    end_iloc=stim_trial_borders[-1]
+                else:
+                    end_iloc=stim_trial_borders[yy+1]
+                    
+                temp_patch=patches.Rectangle([-0.5,start_iloc],1.5,end_iloc-start_iloc,
+                                            color=[0.5,0.5,0.5],alpha=0.10)
+                ax[xx].add_patch(temp_patch)
+        
+            
+            ax[xx].axhline(trialcount_offset,color='k',linewidth=0.5)      
+            ax[xx].set_xlim([-0.25,1])
+            ax[xx].set_ylim([0,trialcount_offset])
+            ax[xx].set_yticks(stim_trial_midpoints)
+            ax[xx].set_yticklabels(stim_types)
+            ax[xx].set_xlabel('time (s)')
+            
+            if xx==0:
+                ax[xx].set_title('reponse trials')
+            elif xx==1:
+                ax[xx].set_title('non-reponse trials')
+                
+                
+        fig.suptitle('stim-aligned  unit:'+str(unit_id)+'  Probe'+session.good_units['probe'].loc[unit_id]+
+                     '  ch:'+str(session.good_units['peak_channel'].loc[unit_id])+'  area:'+
+                     session.good_units['area'].loc[unit_id])
+        
+        fig.tight_layout()
+    
+        fig.savefig(os.path.join(save_folder_path,fig_name+'.png'), dpi=300, format=None, metadata=None,
+                    bbox_inches=None, pad_inches=0.1,
+                    facecolor='auto', edgecolor='auto',
+                    backend=None,
+                   )
+
+        plt.close(fig)
+        
+        
+    
+    
+    #plot lick-aligned rasters with stim time indicated
+    for unit_id in session.good_units.index:
+        
+        fig_name = 'unit'+str(unit_id)+'_'+session.good_units['area'].loc[unit_id]+'_lick_aligned'
+
+        fig,ax=plt.subplots(1,1,figsize=(10,7))
+        
+        # stim_types=['vis1','vis2','sound1','sound2','catch']
+        stim_types=['catch','sound2','sound1','vis2','vis1',]
+        
+        
+        ax.axvline(0,linewidth=1)
+        # ax.axvline(0.5,linewidth=1)
+        
+        trialcount_offset=0
+        stim_trial_borders=[0]
+        
+        for si,ss in enumerate(stim_types):
+        
+            stim_trials = response_trials_sorted.query('trialStimID == @ss')
+        
+            sel_trials = lick_aligned_da.sel(trials=stim_trials.index.values)
+        
+            for it,tt in enumerate(sel_trials.trials.values):
+                trial_spikes = sel_trials.sel(unit_id=unit_id,trials=tt)
+                trial_spike_times = trial_spikes.time[trial_spikes.values.astype('bool')]
+                ax.vlines(trial_spike_times,ymin=it+trialcount_offset,ymax=it+1+trialcount_offset,linewidth=0.75,color='k')
+        
+                if stim_trials['trialStimID'].loc[tt] == stim_trials['trialstimRewarded'].loc[tt]:
+                    plot_color='g'
+                else:
+                    plot_color='r'
+        
+        
+                ax.vlines(-stim_trials['first_lick_latency'].loc[tt],ymin=it-.01+trialcount_offset,
+                          ymax=it+1.01+trialcount_offset,linewidth=2,color=plot_color)
+                
+            ax.axhline(trialcount_offset,color='k',linewidth=0.5)
+            trialcount_offset=trialcount_offset+len(stim_trials)
+            stim_trial_borders.append(trialcount_offset)
+        
+        stim_trial_borders=np.asarray(stim_trial_borders)
+        stim_trial_midpoints=stim_trial_borders[:-1]+(stim_trial_borders[1:]-stim_trial_borders[:-1])/2
+        
+        for yy in np.asarray([1,3]):
+            start_iloc=stim_trial_borders[yy]
+            if (yy+1)>(len(stim_trial_borders)-1):
+                end_iloc=stim_trial_borders[-1]
+            else:
+                end_iloc=stim_trial_borders[yy+1]
+        
+            temp_patch=patches.Rectangle([-1,start_iloc],2,end_iloc-start_iloc,
+                                        color=[0.5,0.5,0.5],alpha=0.10)
+            ax.add_patch(temp_patch)
+        
+        
+        ax.axhline(trialcount_offset,color='k',linewidth=0.5)      
+        ax.set_xlim([-1,1])
+        ax.set_ylim([0,trialcount_offset])
+        ax.set_yticks(stim_trial_midpoints)
+        ax.set_yticklabels(stim_types)
+        ax.set_xlabel('time (s)')
+                
+        fig.suptitle('lick-aligned  unit:'+str(unit_id)+'  Probe'+session.good_units['probe'].loc[unit_id]+
+                     '  ch:'+str(session.good_units['peak_channel'].loc[unit_id])+'  area:'+
+                     session.good_units['area'].loc[unit_id])
+        
+        fig.tight_layout()
+        
+        fig.savefig(os.path.join(save_folder_path,fig_name+'.png'), dpi=300, format=None, metadata=None,
+                    bbox_inches=None, pad_inches=0.1,
+                    facecolor='auto', edgecolor='auto',
+                    backend=None,
+                   )
+
+        plt.close(fig)
+
