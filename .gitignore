@@ -1,5 +1,5 @@
-processing/__pycache__/DR_processing_utils.cpython-38.pyc
-processing/__pycache__/ecephys.cpython-38.pyc
-processing/__pycache__/probeSync.cpython-38.pyc
-analysis/__pycache__/DR_analysis_utils.cpython-38.pyc
-.ipynb_checkpoints/*
+/processing/__pycache__/DR_processing_utils.cpython-38.pyc
+/processing/__pycache__/ecephys.cpython-38.pyc
+/processing/__pycache__/probeSync.cpython-38.pyc
+/analysis/__pycache__/DR_analysis_utils.cpython-38.pyc
+*/.ipynb_checkpoints/*
