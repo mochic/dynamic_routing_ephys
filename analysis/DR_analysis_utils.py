@@ -801,6 +801,7 @@ def plot_stim_vs_lick_aligned_rasters(session, mainPath, templeton_rec):
     for unit_id in session.good_units.index:
         
         fig_name = 'unit'+str(unit_id)+'_'+session.good_units['area'].loc[unit_id]+'_stim_aligned'
+        fig_name = fig_name.replace("N/A","null")
         
         fig,ax=plt.subplots(1,2,figsize=(10,7))
         ax=ax.flatten()
@@ -890,7 +891,8 @@ def plot_stim_vs_lick_aligned_rasters(session, mainPath, templeton_rec):
     for unit_id in session.good_units.index:
         
         fig_name = 'unit'+str(unit_id)+'_'+session.good_units['area'].loc[unit_id]+'_lick_aligned'
-
+        fig_name = fig_name.replace("N/A","null")
+        
         fig,ax=plt.subplots(1,1,figsize=(10,7))
         
         # stim_types=['vis1','vis2','sound1','sound2','catch']
