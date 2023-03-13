@@ -141,7 +141,39 @@ class Session:
         
         else:
             print('tissuecyte folder not found')
-
+            self.manual_assign_unit_areas()
+            
+            
+    def manual_assign_unit_areas(self):
+        area_assign_path = r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\estimate_brain_areas\estimate_brain_areas.csv"
+        areas_table = pd.read_csv(area_assign_path)
+        self.units['area']=''
+        self.good_units['area']=''
+        
+        if np.any(areas_table['mouse']==int(self.metadata['mouseID'])):
+            mouseID = int(self.metadata["mouseID"])
+            session_num = self.metadata['ephys_session_num']
+            areas_table=areas_table.query('mouse == @mouseID and session_num == @session_num').reset_index()
+            
+            for ss in range(0,len(areas_table)):
+                probe=areas_table['probe'][ss]
+                for chan in range(areas_table['start_chan'][ss],areas_table['end_chan'][ss]):
+                    chan_units = self.units.query('peak_channel == @chan and \
+                                                        probe == @probe').index
+                    if len(chan_units)>0:
+                        self.units.loc[chan_units,'area'] = areas_table['area'][ss]
+                        
+            for ss in range(0,len(areas_table)):
+                probe=areas_table['probe'][ss]
+                for chan in range(areas_table['start_chan'][ss],areas_table['end_chan'][ss]):
+                    chan_units = self.good_units.query('peak_channel == @chan and \
+                                                        probe == @probe').index
+                    if len(chan_units)>0:
+                        self.good_units.loc[chan_units,'area'] = areas_table['area'][ss]      
+            print('found and loaded manual area assignments')
+        else:
+            print('manual area assignments not found')
+            
 
 # functions for binning the spiking data into a convenient shape for plotting
 def makePSTH(spikes, startTimes, windowDur, binSize=0.001):
@@ -802,6 +834,7 @@ def plot_stim_vs_lick_aligned_rasters(session, mainPath, templeton_rec):
         
         fig_name = 'unit'+str(unit_id)+'_'+session.good_units['area'].loc[unit_id]+'_stim_aligned'
         fig_name = fig_name.replace("N/A","null")
+        fig_name = fig_name.replace("/","-")
         
         fig,ax=plt.subplots(1,2,figsize=(10,7))
         ax=ax.flatten()
@@ -892,6 +925,7 @@ def plot_stim_vs_lick_aligned_rasters(session, mainPath, templeton_rec):
         
         fig_name = 'unit'+str(unit_id)+'_'+session.good_units['area'].loc[unit_id]+'_lick_aligned'
         fig_name = fig_name.replace("N/A","null")
+        fig_name = fig_name.replace("/","-")
         
         fig,ax=plt.subplots(1,1,figsize=(10,7))
         
