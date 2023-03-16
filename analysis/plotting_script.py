@@ -31,15 +31,15 @@ def plot_data(mainPath):
     # #plot heatmaps function
     # plot_heatmaps(mainPath, session.trial_da, session.trials, session.good_units, templeton_rec)
     
-    # # #plot rasters function
-    # plot_rasters(mainPath, session.trial_da, session.good_units, session.trials, templeton_rec)
+    # #plot rasters function
+    plot_rasters(mainPath, session.trial_da, session.good_units, session.trials, templeton_rec)
     
     # # #plot rewarded vs. unrewarded rasters
     # plot_rew_nonrew_rasters(mainPath, session.trial_da, session.good_units, session.spike_times, 
     #                         session.trials, session.lick_times, templeton_rec)
     
     
-    plot_stim_vs_lick_aligned_rasters(session, mainPath, templeton_rec)
+    # plot_stim_vs_lick_aligned_rasters(session, mainPath, templeton_rec)
     
     
     

@@ -289,7 +289,7 @@ def plot_rasters(mainPath, trial_da, good_units, trials, templeton_rec):
     if os.path.isdir(save_folder_path)==False:
             os.mkdir(save_folder_path)
             
-    save_folder_path = os.path.join(save_folder_path,'rasters')
+    save_folder_path = os.path.join(save_folder_path,'rasters_block_aligned')
     
     if os.path.isdir(save_folder_path)==False:
             os.mkdir(save_folder_path)
@@ -302,9 +302,13 @@ def plot_rasters(mainPath, trial_da, good_units, trials, templeton_rec):
         probe_name=good_units['probe'].loc[unit_id]
         channel_num=str(good_units['peak_channel'].loc[unit_id])
         
-        fig_name = 'Probe'+probe_name+'_unit'+str(unit_id)+'_ch'+channel_num+'_rasters'
+        # fig_name = 'Probe'+probe_name+'_unit'+str(unit_id)+'_ch'+channel_num+'_rasters'
         
-        fig,ax=plt.subplots(2,2,figsize=(8,7))
+        fig_name = 'unit'+str(unit_id)+'_'+good_units['area'].loc[unit_id]+'_probe'+probe_name
+        fig_name = fig_name.replace("N/A","null")
+        fig_name = fig_name.replace("/","-")
+        
+        fig,ax=plt.subplots(2,2,figsize=(10,9))
         ax=ax.flatten()
         stim_types=['vis1','vis2','sound1','sound2']
         
@@ -324,7 +328,7 @@ def plot_rasters(mainPath, trial_da, good_units, trials, templeton_rec):
                 trial_spike_times = trial_spikes.time[trial_spikes.values.astype('bool')]
                 
                 ax[si].vlines(trials['trial_stim_dur'].loc[tt],ymin=it-.01,ymax=it+1.01,linewidth=1,color='tab:blue')
-                ax[si].vlines(trial_spike_times,ymin=it,ymax=it+1,linewidth=0.75,color='k')
+                ax[si].vlines(trial_spike_times,ymin=it,ymax=it+1,linewidth=0.65,color='k')
                 
         
             if len(block_changes)>1:
@@ -352,7 +356,11 @@ def plot_rasters(mainPath, trial_da, good_units, trials, templeton_rec):
             
             ax[si].set_title(ss)
         
-        fig.suptitle('unit:'+str(unit_id)+' Probe'+good_units['probe'].loc[unit_id]+' ch:'+str(good_units['peak_channel'].loc[unit_id]))
+        # fig.suptitle('unit:'+str(unit_id)+' Probe'+good_units['probe'].loc[unit_id]+' ch:'+str(good_units['peak_channel'].loc[unit_id]))
+        
+        fig.suptitle('unit:'+str(unit_id)+'  Probe'+good_units['probe'].loc[unit_id]+
+                     '  ch:'+str(good_units['peak_channel'].loc[unit_id])+'  area:'+
+                     good_units['area'].loc[unit_id])
         
         fig.tight_layout()
         
@@ -376,9 +384,9 @@ def plot_heatmaps(mainPath,trial_da,trials,good_units,templeton_rec):
     else:
         save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\plots"
         sub1 = r"Task 2 pilot"
-    
+ 
     sub2 = r"processed"
-     
+    
     # getting index of substrings
     idx1 = mainPath.index(sub1)
     idx2 = mainPath.index(sub2)
