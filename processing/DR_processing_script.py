@@ -151,20 +151,35 @@ mainPaths = [
     # r"Y:\2023-02-28_09-33-43_649944",
     
     #DR pilot
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220815",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220815", #change to use new KS output?
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220816",
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220817",
     
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230123",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230123", #change to use new KS output?
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230124",
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230125",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230126",
     
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230201",
+    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230130",
+    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230131",
+    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230201",
+    r"\\allen\programs\mindscope\workgroups\np-exp\PilotEphys\Task 2 pilot\DRpilot_644864_20230202",
+    
+    r"\\allen\programs\mindscope\workgroups\np-exp\PilotEphys\Task 2 pilot\DRpilot_644866_20230207",
+    r"Y:\DRpilot_644866_20230208",
+    r"Y:\DRpilot_644866_20230209",
+    r"Y:\DRpilot_644866_20230210",
     
     # r"Y:\DRpilot_644867_20230220",
     # r"Y:\DRpilot_644867_20230221",
     # r"Y:\DRpilot_644867_20230222",
     # r"Y:\DRpilot_644867_20230223",
+    
+    r"Y:\DRpilot_649943_20230213",
+    r"Y:\DRpilot_649943_20230214",
+    r"Y:\DRpilot_649943_20230215",
+    r"Y:\DRpilot_649943_20230216",
+    
     ]
 
 exp_nums = [
@@ -187,9 +202,11 @@ exp_nums = [
     
     #DR pilot
     # 1,2,3, #626791
-    # 1,2,3, #636766
-    # 3, #644864
+    # 1,2,3,4, #636766
+    1,2,3,4, #644864
+    1,2,3,4, #644866
     # 1,2,3,4, #644867
+    1,2,3,4, #649943
     ]
 
 for im,mm in enumerate(mainPaths[:]):

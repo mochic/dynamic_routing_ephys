@@ -478,6 +478,10 @@ def align_trial_times(trials_df, syncData, syncPath, nidaqPath, trialSoundArray,
     
     syncDataset = sync.Dataset(syncPath)
     
+    nTrials = len(trials_df)
+    trialStim = trials_df['trialStimID'].values
+    stimStartFrame = trials_df['trialStimStartFrame']
+    
     #load vsyncs
     vsyncRising,vsyncFalling = probeSync.get_sync_line_data(syncDataset,'vsync_stim')
     vsyncTimes = vsyncFalling[1:] if vsyncFalling[0] < vsyncRising[0] else vsyncFalling
@@ -501,6 +505,9 @@ def align_trial_times(trials_df, syncData, syncPath, nidaqPath, trialSoundArray,
     if RF_first:
         vsyncBehavior = vsyncTimes[(vsyncTimes>stimRunningRising[1])&
                                    (vsyncTimes<=stimRunningFalling[1])]
+        if len(vsyncBehavior)<stimStartFrame.iloc[-1]:
+            vsyncBehavior = vsyncTimes[(vsyncTimes>stimRunningRising[2])&
+                                       (vsyncTimes<=stimRunningFalling[2])]    
         photodiodeBehavior = photodiodeAll[(photodiodeAll>vsyncBehavior[0])]
         photodiodeBehavior = photodiodeBehavior[:len(vsyncBehavior)]
     else:
@@ -519,12 +526,7 @@ def align_trial_times(trials_df, syncData, syncPath, nidaqPath, trialSoundArray,
     for ff in range(1,len(photodiodeBehavior),2):
         frameDelayAvg[ff-1:ff+1] = np.mean(photodiodeBehavior[ff-1:ff+1]-vsyncBehavior[ff-1:ff+1])
         
-    nTrials = len(trials_df)
-    trialStim = trials_df['trialStimID'].values
-    stimStartFrame = trials_df['trialStimStartFrame']
-    
     #find stimulus latencies
-    
     nidaqDatPath = os.path.join(nidaqPath[0],'continuous.dat')
     
     numAnalogCh = 8
@@ -596,6 +598,11 @@ def align_rf_trial_times(rf_df, syncData, syncPath, nidaqPath, rf_trialSoundArra
     
     syncDataset = sync.Dataset(syncPath)
     
+    #RF mapping sound delay
+    nTrials = len(rf_df)
+    trialStim = rf_df['trialStimType'].values
+    stimStartFrame = rf_df['stimStartFrame']
+    
     #load vsyncs
     vsyncRising,vsyncFalling = probeSync.get_sync_line_data(syncDataset,'vsync_stim')
     vsyncTimes = vsyncFalling[1:] if vsyncFalling[0] < vsyncRising[0] else vsyncFalling
@@ -618,6 +625,9 @@ def align_rf_trial_times(rf_df, syncData, syncPath, nidaqPath, rf_trialSoundArra
     if RF_first:
         vsyncRF = vsyncTimes[(vsyncTimes>stimRunningRising[0])&
                              (vsyncTimes<=stimRunningFalling[0])]
+        if len(vsyncRF)<stimStartFrame.iloc[-1]:
+            vsyncRF = vsyncTimes[(vsyncTimes>stimRunningRising[1])&
+                                 (vsyncTimes<=stimRunningFalling[1])]  
         photodiodeRF = photodiodeAll[(photodiodeAll>vsyncRF[0])]
         photodiodeRF = photodiodeRF[:len(vsyncRF)]
     else:
@@ -634,11 +644,6 @@ def align_rf_trial_times(rf_df, syncData, syncPath, nidaqPath, rf_trialSoundArra
     RFframeDelayAvg = np.zeros((len(photodiodeRF)))
     for ff in range(1,len(photodiodeRF),2):
         RFframeDelayAvg[ff-1:ff+1] = np.mean(photodiodeRF[ff-1:ff+1]-vsyncRF[ff-1:ff+1])
-    
-    #RF mapping sound delay
-    nTrials = len(rf_df)
-    trialStim = rf_df['trialStimType'].values
-    stimStartFrame = rf_df['stimStartFrame']
     
     #find stimulus latencies
     nidaqDatPath = os.path.join(nidaqPath[0],'continuous.dat')
