@@ -409,6 +409,7 @@ def sync_data_streams(syncPath,ephysPath,nidaqPath):
     # find probe and nidaq offsets and sample rates
     ephysSampleRate = 30000
     for key,d in syncData.items():
+        print(key)
         datTimestampsPath = os.path.join(d['dirName'],'sample_numbers.npy')
         ttlStatesPath = os.path.join(d['dirName'].replace('continuous','events'),'TTL','states.npy')
         ttlTimestampsPath = os.path.join(os.path.dirname(ttlStatesPath),'sample_numbers.npy')
@@ -742,10 +743,11 @@ def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, kilosortPa
             if 'probe'+probe in kk:
                 KSdirName=kk
 
-        if os.path.isfile(os.path.join(dirName,'spike_clusters.npy')):
+        if os.path.isfile(os.path.join(KSdirName,'spike_clusters.npy')): 
+            dirPath = KSdirName        
+        elif os.path.isfile(os.path.join(dirName,'spike_clusters.npy')):
             dirPath = dirName #os.path.join(ephysPath,'continuous',dirName)
-        elif os.path.isfile(os.path.join(KSdirName,'spike_clusters.npy')):
-            dirPath = KSdirName
+        
         
         #load kilosort output for this probe
         if len(dirPath)>0:
