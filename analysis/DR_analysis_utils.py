@@ -262,7 +262,7 @@ def make_trial_da(good_units, spike_times, trials):
     return trial_da
 
 # %%
-def plot_rasters(mainPath, trial_da, good_units, trials, templeton_rec):
+def plot_rasters(mainPath, trial_da, good_units, trials, lick_times, templeton_rec):
     
     if templeton_rec==True:
         save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\plots"
@@ -297,6 +297,24 @@ def plot_rasters(mainPath, trial_da, good_units, trials, templeton_rec):
     if templeton_rec == True:
         trials = trials.sort_values(by='trial_stim_dur',axis=0,ascending=True)
     
+    # find first licks after stimulus start
+    first_lick_time=np.zeros(len(trials))
+    first_lick_time[:]=np.nan
+    for tt in range(0,len(trials)):
+        if tt<len(trials)-1:
+            first_lick=np.where((lick_times>trials['stimStartTime'].iloc[tt])&
+                                (lick_times<trials['stimStartTime'].iloc[tt+1]))[0]
+        else:
+            first_lick=np.where((lick_times>trials['stimStartTime'].iloc[tt]))[0]
+        
+        if len(first_lick)>0:
+            first_lick_time[tt]=lick_times[first_lick[0]]        
+    trials['first_lick_time']=first_lick_time
+    trials['first_lick_latency']=trials['first_lick_time']-trials['stimStartTime']
+    
+    #add green tick for correct response, red tick for incorrect response
+    
+    
     for unit_id in good_units.index:
         
         probe_name=good_units['probe'].loc[unit_id]
@@ -330,6 +348,12 @@ def plot_rasters(mainPath, trial_da, good_units, trials, templeton_rec):
                 ax[si].vlines(trials['trial_stim_dur'].loc[tt],ymin=it-.01,ymax=it+1.01,linewidth=1,color='tab:blue')
                 ax[si].vlines(trial_spike_times,ymin=it,ymax=it+1,linewidth=0.65,color='k')
                 
+                if sel_trials_table['trialStimID'].loc[tt]==sel_trials_table['trialstimRewarded'].loc[tt]:
+                    tick_color='g'
+                else:
+                    tick_color='r'
+                if sel_trials_table['trial_response'].loc[tt]==True:
+                    ax[si].vlines(sel_trials_table['first_lick_latency'].loc[tt],ymin=it,ymax=it+1,linewidth=2,color=tick_color)
         
             if len(block_changes)>1:
                 if block_changes.iloc[0]['trialstimRewarded']=='vis1':
