@@ -9,7 +9,8 @@ Created on Fri Jan 13 16:14:43 2023
 
 from DR_analysis_utils import Session, makePSTH, make_neuron_time_trials_tensor
 from DR_analysis_utils import make_trial_da, plot_rasters, plot_heatmaps, plot_rew_nonrew_rasters
-from DR_analysis_utils import plot_stim_vs_lick_aligned_rasters
+from DR_analysis_utils import plot_stim_vs_lick_aligned_rasters, plot_smoothed_response_rate
+from DR_analysis_utils import compute_smoothed_response_rate, plot_area_PSTHs_by_block, plot_area_PSTHs_by_response
 
 # %%
 def plot_data(mainPath):
@@ -25,14 +26,18 @@ def plot_data(mainPath):
     session = Session(path=mainPath)
     session.assign_unit_areas()
     
+    session =  compute_smoothed_response_rate(session)
+    
+    plot_smoothed_response_rate(session, mainPath, templeton_rec)
+     
     #make trial-based data array
     session.trial_da = make_trial_da(session.good_units, session.spike_times, session.trials)
     
     # #plot heatmaps function
     # plot_heatmaps(mainPath, session.trial_da, session.trials, session.good_units, templeton_rec)
     
-    # #plot rasters function
-    plot_rasters(mainPath, session.trial_da, session.good_units, session.trials, session.lick_times, templeton_rec)
+    # # #plot rasters function
+    # plot_rasters(mainPath, session.trial_da, session.good_units, session.trials, session.lick_times, templeton_rec)
     
     # # #plot rewarded vs. unrewarded rasters
     # plot_rew_nonrew_rasters(mainPath, session.trial_da, session.good_units, session.spike_times, 
@@ -41,6 +46,9 @@ def plot_data(mainPath):
     
     # plot_stim_vs_lick_aligned_rasters(session, mainPath, templeton_rec)
     
+    
+    # plot_area_PSTHs_by_block(session,templeton_rec)
+    plot_area_PSTHs_by_response(session,templeton_rec)
     
     
     
@@ -76,20 +84,34 @@ mainPaths = [
     # r"Y:\2023-02-28_09-33-43_649944\processed",
     
     #DR pilot
-    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220815\processed",
+    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220815\processed", 
     r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220816\processed",
     r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220817\processed",
     
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230123\processed",
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230124\processed",
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230125\processed",
+    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230123\processed", 
+    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230124\processed", 
+    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230125\processed", 
+    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230126\processed", 
     
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230201\processed",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230130\processed",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230131\processed", 
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230201\processed", 
+    # r"\\allen\programs\mindscope\workgroups\np-exp\PilotEphys\Task 2 pilot\DRpilot_644864_20230202\processed",
     
-    # r"Y:\DRpilot_644867_20230220\processed",
-    # r"Y:\DRpilot_644867_20230221\processed",
-    # r"Y:\DRpilot_644867_20230222\processed",
-    # r"Y:\DRpilot_644867_20230223\processed",
+    # r"\\allen\programs\mindscope\workgroups\np-exp\PilotEphys\Task 2 pilot\DRpilot_644866_20230207\processed",
+    # r"Y:\DRpilot_644866_20230208\processed",
+    # r"Y:\DRpilot_644866_20230209\processed",
+    # r"Y:\DRpilot_644866_20230210\processed",
+    
+    r"Y:\DRpilot_644867_20230220\processed",
+    r"Y:\DRpilot_644867_20230221\processed",
+    r"Y:\DRpilot_644867_20230222\processed",
+    r"Y:\DRpilot_644867_20230223\processed",
+    
+    r"Y:\DRpilot_649943_20230213\processed", 
+    r"Y:\DRpilot_649943_20230214\processed",
+    r"Y:\DRpilot_649943_20230215\processed",
+    r"Y:\DRpilot_649943_20230216\processed",
     ]
 
 for mm in mainPaths[:]:

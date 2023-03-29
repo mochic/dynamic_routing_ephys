@@ -10,9 +10,11 @@ Created on Mon Jan  9 11:16:14 2023
 """
 
 import numpy as np
+import scipy as sp
 import pandas as pd
 import xarray as xr
 import scipy.signal as sg
+import scipy.stats as st
 import matplotlib.pyplot as plt
 from matplotlib import patches
 import pickle
@@ -97,6 +99,15 @@ class Session:
             
             #load RF frames
             self.rf_frames=pd.read_csv(os.path.join(path,'rf_mapping_frames.csv'),index_col=[0])
+        
+        #compute average run speed for each trial
+        avg_run_speed=np.zeros(len(self.trials))
+        for tt in range(0,len(self.trials)):
+            startFrame=self.trials['trialStartFrame'].iloc[tt]
+            endFrame=self.trials['trialStimStartFrame'].iloc[tt]
+            avg_run_speed[tt]=np.nanmean(self.frames['runningSpeed'][startFrame:endFrame])
+        self.trials['avg_run_speed'] = avg_run_speed
+        
         
     def assign_unit_areas(self):
         #check for area IDs
@@ -1031,3 +1042,465 @@ def plot_stim_vs_lick_aligned_rasters(session, mainPath, templeton_rec):
 
         plt.close(fig)
 
+# %%
+def compute_smoothed_response_rate(session,trials_to_smooth=5):
+    
+    stims=session.trials['trialStimID'].unique()
+    gwindow = sg.gaussian(trials_to_smooth*3, std=trials_to_smooth)
+    
+    for ss in stims:
+
+        stimTrials=session.trials.query('trialStimID == @ss')
+        stimTrials[ss+'_smooth']=sg.convolve(stimTrials['trial_response'].values,gwindow,mode='same')/np.sum(gwindow)
+        interp_func=sp.interpolate.interp1d(stimTrials.index,stimTrials[ss+'_smooth'])
+    
+        xnew=np.arange(np.min(stimTrials.index),np.max(stimTrials.index))
+        temp_interp=interp_func(xnew)
+        interp_full=np.zeros((len(session.trials)))
+        interp_full[:]=np.nan
+        interp_full[np.min(stimTrials.index):np.max(stimTrials.index)]=temp_interp
+        session.trials[ss+'_interp']=interp_full
+        
+    #calculate smoothed cross- and intra-modal dprime
+    cross_modal_dprime = np.zeros(len(session.trials))
+    cross_modal_dprime[:] = np.nan
+    intra_modal_dprime = np.zeros(len(session.trials))
+    intra_modal_dprime[:] = np.nan
+    
+    for tt,trial in session.trials.iterrows():
+        if (trial['vis_autoreward_trials']==True)|(trial['aud_autoreward_trials']==True):
+            continue
+            
+        if trial['trialstimRewarded'] == 'vis1':
+            temp_hit=trial['vis1_interp']
+            temp_fa=trial['sound1_interp']
+            temp_intra_fa=trial['vis2_interp']
+            
+        elif trial['trialstimRewarded'] == 'sound1':
+            temp_hit=trial['sound1_interp']
+            temp_fa=trial['vis1_interp']
+            temp_intra_fa=trial['sound2_interp']
+            
+        if temp_hit==1:
+            temp_hit=0.999
+        elif temp_hit==0:
+            temp_hit=0.001      
+        if temp_fa==1:
+            temp_fa=0.999
+        elif temp_fa==0:
+            temp_fa=0.001
+        if temp_intra_fa==1:
+            temp_intra_fa=0.999
+        elif temp_intra_fa==0:
+            temp_intra_fa=0.001
+       
+        cross_modal_dprime[tt]=(st.norm.ppf(temp_hit) - st.norm.ppf(temp_fa))
+        intra_modal_dprime[tt]=(st.norm.ppf(temp_hit) - st.norm.ppf(temp_intra_fa))
+        
+    session.trials['cross_modal_dprime'] = cross_modal_dprime
+    session.trials['intra_modal_dprime'] = intra_modal_dprime
+    
+        
+    return session
+    
+# %% 
+def plot_smoothed_response_rate(session, mainPath, templeton_rec, criteria=0.3):
+    
+    if templeton_rec==True:
+        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\plots"
+        prefix = r"TempletonPilot"
+    else:
+        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\plots"
+        prefix = r"DRpilot"
+ 
+    session_folder=prefix+'_'+session.metadata['mouseID']+'_'+session.metadata['session_date']
+          
+    save_folder_path = os.path.join(save_folder_mainPath,session_folder,'behavior plots')
+    
+    if os.path.isdir(os.path.join(save_folder_mainPath,session_folder))==False:
+            os.mkdir(os.path.join(save_folder_mainPath,session_folder))
+    if os.path.isdir(save_folder_path)==False:
+            os.mkdir(save_folder_path)
+    
+    # smooth & interpolate response rate to each stimulus across all trials
+    trials_to_smooth=5
+    gwindow = sg.gaussian(trials_to_smooth*3, std=trials_to_smooth)
+    
+    stims=session.trials['trialStimID'].unique()
+    
+    stim_list=np.asarray(['vis1','vis2','sound1','sound2','catch'])
+    colors=np.asarray(['tab:blue','tab:green','tab:red','tab:orange','grey'])
+
+    fig_name = 'smoothed_response_rate_'+session.metadata['mouseID']+'_rec'+str(session.metadata['ephys_session_num'])
+    fig,ax=plt.subplots(1,1)
+    
+    for ss in stims:
+        plot_color=colors[stim_list==ss][0]
+        ax.plot(np.arange(0,len(session.trials)),session.trials[ss+'_interp'],color=plot_color)
+    
+        
+    high_performance_trials=session.trials.query('abs(vis1_interp - sound1_interp)>=@criteria').index
+    ax.plot(high_performance_trials,np.ones(len(high_performance_trials)),'k.')
+    ax.plot(sg.convolve(session.trials['avg_run_speed']
+                        /session.trials['avg_run_speed'].max(),
+                        gwindow,mode='same')/np.sum(gwindow),'k',linewidth=0.5)
+    
+    ax.legend(stims)
+    ax.set_title(session.metadata['mouseID']+' rec'+str(session.metadata['ephys_session_num']))
+    ax.set_xlabel('trial number')
+    ax.set_ylabel('smoothed response rate to stimulus')
+    
+    fig.tight_layout()
+    
+    fig.savefig(os.path.join(save_folder_path,fig_name+'.png'), dpi=300, format=None, metadata=None,
+                bbox_inches=None, pad_inches=0.1,
+                facecolor='auto', edgecolor='auto',
+                backend=None,
+               )
+
+    plt.close(fig)
+    
+    
+    #plot smoothed dprime
+
+    fig_name = 'smoothed_dprime_'+session.metadata['mouseID']+'_rec'+str(session.metadata['ephys_session_num'])
+    fig,ax=plt.subplots(1,1)
+    
+    ax.plot(np.arange(0,len(session.trials)),session.trials['cross_modal_dprime'],'k',linewidth=1.5)
+    ax.plot(np.arange(0,len(session.trials)),session.trials['intra_modal_dprime'],'k--',linewidth=1.5)       
+    
+    ax.axhline(2,color='tab:blue',linewidth=1)
+    
+    vis_autorewards=session.trials.query('vis_autoreward_trials == True').index.values
+    aud_autorewards=session.trials.query('aud_autoreward_trials == True').index.values
+    
+    for xx in range(0,len(vis_autorewards)):
+        ax.axvline(vis_autorewards[xx],color='b',alpha=0.5)
+        ax.axvline(aud_autorewards[xx],color='r',alpha=0.5)
+        if xx==0:
+            ax.legend(['cross-modal dprime','intra-modal dprime','default threshold',
+                      'vis autorewards','aud autorewards'])
+            
+    ax.set_title(session.metadata['mouseID']+' rec'+str(session.metadata['ephys_session_num']))
+    ax.set_xlabel('trial number')
+    ax.set_ylabel('smoothed dprime')
+    
+    fig.tight_layout()
+    
+    fig.savefig(os.path.join(save_folder_path,fig_name+'.png'), dpi=300, format=None, metadata=None,
+                bbox_inches=None, pad_inches=0.1,
+                facecolor='auto', edgecolor='auto',
+                backend=None,
+               )
+
+    plt.close(fig)
+    
+# %%
+def plot_area_PSTHs_by_block(session,templeton_rec,criteria=0.3):
+    
+    if templeton_rec==True:
+        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\plots"
+        prefix = r"TempletonPilot"
+    else:
+        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\plots"
+        prefix = r"DRpilot"
+ 
+    session_folder=prefix+'_'+session.metadata['mouseID']+'_'+session.metadata['session_date']
+          
+    save_folder_path = os.path.join(save_folder_mainPath,session_folder,'PSTH_by_block')
+    
+    if os.path.isdir(os.path.join(save_folder_mainPath,session_folder))==False:
+            os.mkdir(os.path.join(save_folder_mainPath,session_folder))
+    if os.path.isdir(save_folder_path)==False:
+            os.mkdir(save_folder_path)
+    
+    # plot PSTHs comparing vis-attend and aud-attend:
+    attend_vis_trials=session.trials.query('(vis1_interp - sound1_interp)>=@criteria')
+    attend_aud_trials=session.trials.query('(sound1_interp - vis1_interp)>=@criteria')
+    
+    # simple_areas = []
+    # for aa in session.good_units['area'].unique():
+    #     main_area = ''
+    #     for char in aa:
+    #         if char.isupper()|char.islower():
+    #             main_area+=char
+    #         else:
+    #             break
+    #     if main_area not in simple_areas:
+    #         simple_areas.append(main_area)
+    unique_areas=session.good_units['area'].unique()
+
+    for aa in unique_areas:#simple_areas:
+    
+        #select units to plot by area
+        area_sel=aa
+
+        sel_units = session.good_units.query('area.str.contains(@area_sel)')
+        
+        fig_title=('area '+area_sel+' (n_units='+str(len(sel_units))+
+               ')  vis_speed='+str(np.round(attend_vis_trials['avg_run_speed'].mean(),decimals=1))+
+               '  aud_speed='+str(np.round(attend_aud_trials['avg_run_speed'].mean(),decimals=1)))
+        fig_name=aa+'_PSTH_by_block_'+session.metadata['mouseID']+'_'+str(session.metadata['ephys_session_num'])
+        fig_name.replace('/','-')
+        
+        # average PSTH across selected units & each stimulus
+        stimuli = np.unique(session.trials['trialStimID'])
+        stim_PSTHs = {}
+        
+        for stim in stimuli:
+            if 'trialOptoVoltage' in session.trials: 
+                stim_trials_attend_vis = attend_vis_trials.query('trialStimID == @stim and trialOptoVoltage.isnull()').index
+                stim_trials_attend_aud = attend_aud_trials.query('trialStimID == @stim and trialOptoVoltage.isnull()').index
+            else:
+                stim_trials_attend_vis = attend_vis_trials.query('trialStimID == @stim').index
+                stim_trials_attend_aud = attend_aud_trials.query('trialStimID == @stim').index
+            
+            stim_PSTHs[stim]={}
+            stim_PSTHs[stim]['attend_vis']=[]
+            stim_PSTHs[stim]['attend_aud']=[]
+            stim_PSTHs[stim]['attend_vis_n']=len(stim_trials_attend_vis)
+            stim_PSTHs[stim]['attend_aud_n']=len(stim_trials_attend_aud)
+            
+            stim_PSTHs[stim]['attend_vis'].append(session.trial_da.sel(
+                                                unit_id=sel_units.index,
+                                                trials=stim_trials_attend_vis).mean(dim=['trials']))
+            
+            stim_PSTHs[stim]['attend_aud'].append(session.trial_da.sel(
+                                                unit_id=sel_units.index,
+                                                trials=stim_trials_attend_aud).mean(dim=['trials']))
+        
+        # smooth each unit's PSTH
+        gwindow = sg.gaussian(25, std=10)
+        stim_PSTH_smooth={}
+        for stim in stimuli:
+            stim_PSTH_smooth[stim]={}
+            stim_PSTH_smooth[stim]['attend_vis']=np.zeros(stim_PSTHs[stim]['attend_vis'][0].shape)
+            stim_PSTH_smooth[stim]['attend_aud']=np.zeros(stim_PSTHs[stim]['attend_aud'][0].shape)
+            for iu,uu in enumerate(stim_PSTHs[stim]['attend_vis'][0].unit_id.values):
+                stim_PSTH_smooth[stim]['attend_vis'][iu,:]=sg.convolve(stim_PSTHs[stim]['attend_vis'][0].sel(unit_id=uu),
+                                                                        gwindow,mode='same')/np.sum(gwindow)
+                stim_PSTH_smooth[stim]['attend_aud'][iu,:]=sg.convolve(stim_PSTHs[stim]['attend_aud'][0].sel(unit_id=uu),
+                                                                        gwindow,mode='same')/np.sum(gwindow)
+                
+        #do the plotting
+        fig,ax=plt.subplots(5,1,figsize=(6,12),sharex=True,sharey=True)
+
+        trialconds=['attend_vis','attend_aud']
+        
+        for ss,stim in enumerate(stimuli):
+            ax[ss].set_title(stim+'; n_vis='+str(stim_PSTHs[stim]['attend_vis_n'])+
+                             '; n_aud='+str(stim_PSTHs[stim]['attend_aud_n']))
+            
+            for tt,trial_type in enumerate(trialconds):
+                y=np.nanmean(stim_PSTH_smooth[stim][trial_type],0)
+                err=np.nanstd(stim_PSTH_smooth[stim][trial_type],0)/np.sqrt(stim_PSTH_smooth[stim][trial_type].shape[0])
+                linex=ax[ss].plot(stim_PSTHs[stim][trial_type][0].time, y)
+                ax[ss].fill_between(stim_PSTHs[stim][trial_type][0].time, y-err, y+err,
+                    alpha=0.2, edgecolor=None, facecolor=linex[0].get_color())
+                
+                if (ss==0)&(tt==1):
+                    ax[ss].legend(trialconds)
+                
+                if tt==1:
+                    ax[ss].axvline(0,color='k',linestyle='--',linewidth=0.75)
+                    ax[ss].axvline(0.5,color='k',linestyle='--',linewidth=0.75)
+                    ax[ss].set_ylabel('FR (Hz)')
+                    
+        ax[ss].set_xlabel('time (s)')
+        
+        fig.tight_layout()
+        
+        fig.suptitle(fig_title)
+        
+        fig.savefig(os.path.join(save_folder_path,fig_name+'.png'), dpi=300, format=None, metadata=None,
+                    bbox_inches=None, pad_inches=0.1,
+                    facecolor='auto', edgecolor='auto',
+                    backend=None,
+                   )
+
+        plt.close(fig)
+        
+
+# %%
+def plot_area_PSTHs_by_response(session,templeton_rec,criteria=2):
+    
+    if templeton_rec==True:
+        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\plots"
+        prefix = r"TempletonPilot"
+    else:
+        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\plots"
+        prefix = r"DRpilot"
+ 
+    session_folder=prefix+'_'+session.metadata['mouseID']+'_'+session.metadata['session_date']
+          
+    save_folder_path = os.path.join(save_folder_mainPath,session_folder,'PSTH_by_response')
+    
+    if os.path.isdir(os.path.join(save_folder_mainPath,session_folder))==False:
+            os.mkdir(os.path.join(save_folder_mainPath,session_folder))
+    if os.path.isdir(save_folder_path)==False:
+            os.mkdir(save_folder_path)
+    
+    #only used for finding running speed currently
+    attend_vis_trials=session.trials.query('(vis1_interp - sound1_interp)>=0.3')
+    attend_aud_trials=session.trials.query('(sound1_interp - vis1_interp)>=0.3')
+
+    unique_areas=session.good_units['area'].unique()
+    unit_types=['RS','FS']
+
+    for aa in unique_areas:#simple_areas:
+        #select units to plot by area
+        area_sel=aa
+        
+        for unit_type_sel in unit_types:
+        
+            if unit_type_sel=='FS':
+                sel_units = session.good_units.query('area.str.contains(@area_sel) and duration<=0.4')
+            elif unit_type_sel=='RS':
+                sel_units = session.good_units.query('area.str.contains(@area_sel) and duration>0.4')
+                
+            fig_title=('area '+area_sel+' '+unit_type_sel+' (n='+str(len(sel_units))+
+                       ')  vis_speed='+str(np.round(attend_vis_trials['avg_run_speed'].mean(),decimals=1))+
+                       '  aud_speed='+str(np.round(attend_aud_trials['avg_run_speed'].mean(),decimals=1))+
+                       ' dprime>='+str(criteria))
+            fig_name=aa+'_'+unit_type_sel+'_PSTH_by_response_'+session.metadata['mouseID']+'_'+str(session.metadata['ephys_session_num'])
+            fig_name.replace('/','-')
+            
+            # average PSTH across selected units & each stimulus
+            stimuli = np.unique(session.trials['trialStimID'])
+            response_types = ['hit','miss','fa','cr']
+            stim_PSTHs = {}
+            stim_PSTHs_z = {}
+            
+            # compute baseline mean and std
+            sel_baseline_trials=session.trials.query('cross_modal_dprime >= 1.5 and intra_modal_dprime >= 1.5').index
+            baseline = session.trial_da.sel(unit_id=sel_units.index,
+                                             time=slice(-0.5,0),
+                                             trials=sel_baseline_trials).mean(dim=['time'])
+            baseline_mean = baseline.mean(dim=['trials'])
+            baseline_std = baseline.std(dim=['trials'])
+            
+            for stim in stimuli:
+                stim_trials = session.trials.query('trialStimID == @stim and \
+                                                    cross_modal_dprime >= 1.5 and\
+                                                    intra_modal_dprime >= 1.5')
+                
+                stim_response_trials = {}
+                stim_response_trials['hit'] = stim_trials.query('trial_response == True and trialStimID == trialstimRewarded')
+                stim_response_trials['miss'] = stim_trials.query('trial_response == False and trialStimID == trialstimRewarded')
+                stim_response_trials['fa'] = stim_trials.query('trial_response == True and trialStimID != trialstimRewarded')
+                stim_response_trials['cr'] = stim_trials.query('trial_response == False and trialStimID != trialstimRewarded')
+                stim_PSTHs[stim]={}
+                stim_PSTHs_z[stim]={}
+                
+                for rr in response_types:
+                    stim_PSTHs[stim][rr+'_n']=[]
+                    stim_PSTHs[stim][rr+'_n']=len(stim_response_trials[rr])
+                    stim_PSTHs[stim][rr]=[]
+                    stim_PSTHs[stim][rr].append(session.trial_da.sel(
+                                                        unit_id=sel_units.index,
+                                                        trials=stim_response_trials[rr].index).mean(dim=['trials']))
+                    
+                    stim_PSTHs_z[stim][rr+'_n']=[]
+                    stim_PSTHs_z[stim][rr+'_n']=len(stim_response_trials[rr])
+                    stim_PSTHs_z[stim][rr]=[]
+                    stim_PSTHs_z[stim][rr].append((session.trial_da.sel(
+                                                  unit_id=sel_units.index,
+                                                  trials=stim_response_trials[rr].index).mean(dim=['trials'])-
+                                                  baseline_mean)/baseline_std)
+                    
+            # smooth each unit's PSTH
+            gwindow = sg.gaussian(20, std=5)
+            stim_PSTH_smooth={}
+            stim_PSTH_z_smooth={}
+            for stim in stimuli:
+                stim_PSTH_smooth[stim]={}
+                stim_PSTH_z_smooth[stim]={}
+                
+                for rr in response_types:
+                    stim_PSTH_smooth[stim][rr]=np.zeros(stim_PSTHs[stim][rr][0].shape)
+                    stim_PSTH_z_smooth[stim][rr]=np.zeros(stim_PSTHs[stim][rr][0].shape)
+                    for iu,uu in enumerate(stim_PSTHs[stim][rr][0].unit_id.values):
+                        stim_PSTH_smooth[stim][rr][iu,:]=sg.convolve(stim_PSTHs[stim][rr][0].sel(unit_id=uu),
+                                                                                gwindow,mode='same')/np.sum(gwindow)
+                        stim_PSTH_z_smooth[stim][rr][iu,:]=sg.convolve(stim_PSTHs_z[stim][rr][0].sel(unit_id=uu),
+                                                                                gwindow,mode='same')/np.sum(gwindow)
+
+            fig,ax=plt.subplots(5,1,figsize=(6,12),sharex=True,sharey=True)
+
+            response_types = ['miss','cr','fa','hit']
+            color_sel = ['tab:blue','k','tab:red','tab:green']
+            
+            for ss,stim in enumerate(stimuli):
+                ax[ss].set_title(stim+'; n_hit='+str(stim_PSTHs[stim]['hit_n'])+
+                                 '; n_miss='+str(stim_PSTHs[stim]['miss_n'])+
+                                 '; n_fa='+str(stim_PSTHs[stim]['fa_n'])+
+                                 '; n_cr='+str(stim_PSTHs[stim]['cr_n']))
+                line_all=[]
+                for tt,trial_type in enumerate(response_types):
+                    y=np.nanmean(stim_PSTH_smooth[stim][trial_type],0)
+                    err=np.nanstd(stim_PSTH_smooth[stim][trial_type],0)/np.sqrt(stim_PSTH_smooth[stim][trial_type].shape[0])
+                    linex=ax[ss].plot(stim_PSTHs[stim][trial_type][0].time, y, color=color_sel[tt])
+                    line_all.append(linex[0])
+                    ax[ss].fill_between(stim_PSTHs[stim][trial_type][0].time, y-err, y+err,
+                        alpha=0.2, edgecolor=None, facecolor=linex[0].get_color())
+                
+                if ss==0:      
+                    ax[ss].legend(line_all,response_types)
+                ax[ss].axvline(0,color='k',linestyle='--',linewidth=0.75)
+                ax[ss].axvline(0.5,color='k',linestyle='--',linewidth=0.75)
+                ax[ss].set_ylabel('FR (Hz)')
+                ax[ss].set_xlim([-0.25,0.75])
+            ax[ss].set_xlabel('time (s)')
+            
+            fig.suptitle(fig_title)
+            
+            fig.tight_layout()
+            
+            fig.savefig(os.path.join(save_folder_path,fig_name+'.png'), dpi=300, format=None, metadata=None,
+                        bbox_inches=None, pad_inches=0.1,
+                        facecolor='auto', edgecolor='auto',
+                        backend=None,
+                       )
+
+            plt.close(fig)
+            
+            fig_name=aa+'_'+unit_type_sel+'_PSTH_by_response_zscore_'+session.metadata['mouseID']+'_'+str(session.metadata['ephys_session_num'])
+            fig_name.replace('/','-')
+            fig,ax=plt.subplots(5,1,figsize=(6,12),sharex=True,sharey=True)
+
+            response_types = ['miss','cr','fa','hit']
+            color_sel = ['tab:blue','k','tab:red','tab:green']
+            
+            for ss,stim in enumerate(stimuli):
+                ax[ss].set_title(stim+'; n_hit='+str(stim_PSTHs[stim]['hit_n'])+
+                                 '; n_miss='+str(stim_PSTHs[stim]['miss_n'])+
+                                 '; n_fa='+str(stim_PSTHs[stim]['fa_n'])+
+                                 '; n_cr='+str(stim_PSTHs[stim]['cr_n']))
+                line_all=[]
+                for tt,trial_type in enumerate(response_types):
+                    y=np.nanmean(stim_PSTH_z_smooth[stim][trial_type],0)
+                    err=np.nanstd(stim_PSTH_z_smooth[stim][trial_type],0)/np.sqrt(stim_PSTH_z_smooth[stim][trial_type].shape[0])
+                    linex=ax[ss].plot(stim_PSTHs_z[stim][trial_type][0].time, y, color=color_sel[tt])
+                    line_all.append(linex[0])
+                    ax[ss].fill_between(stim_PSTHs_z[stim][trial_type][0].time, y-err, y+err,
+                        alpha=0.2, edgecolor=None, facecolor=linex[0].get_color())
+                
+                if ss==0:      
+                    ax[ss].legend(line_all,response_types)
+                ax[ss].axvline(0,color='k',linestyle='--',linewidth=0.75)
+                ax[ss].axvline(0.5,color='k',linestyle='--',linewidth=0.75)
+                ax[ss].set_ylabel('z-scored FR')
+                ax[ss].set_xlim([-0.25,0.75])
+            ax[ss].set_xlabel('time (s)')
+            
+            fig.suptitle(fig_title)
+            
+            fig.tight_layout()
+            
+            fig.savefig(os.path.join(save_folder_path,fig_name+'.png'), dpi=300, format=None, metadata=None,
+                        bbox_inches=None, pad_inches=0.1,
+                        facecolor='auto', edgecolor='auto',
+                        backend=None,
+                       )
+
+            plt.close(fig)

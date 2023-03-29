@@ -208,6 +208,8 @@ def load_behavior_data(behavPath):
                         aud_hit_trials[tt]=True
                     else:
                         aud_miss_trials[tt]=True
+                else:
+                    aud_autoreward_trials[tt]=True
     
             elif ('sound2' in trialStimID[tt]):
                 aud_nogo_trials[tt]=True
