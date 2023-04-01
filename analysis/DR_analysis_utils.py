@@ -115,6 +115,13 @@ class Session:
         tissuecyte_path = r"\\allen\programs\mindscope\workgroups\np-behavior\tissuecyte"
         self.units['area']=''
         self.good_units['area']=''
+        self.units['AP_coord']=np.nan
+        self.good_units['AP_coord']=np.nan
+        self.units['DV_coord']=np.nan
+        self.good_units['DV_coord']=np.nan
+        self.units['ML_coord']=np.nan
+        self.good_units['ML_coord']=np.nan
+        
         if os.path.isdir(os.path.join(tissuecyte_path,self.metadata['mouseID'])):
             for probe in self.units['probe'].unique():
                 if type(probe)==str:
@@ -135,8 +142,12 @@ class Session:
                                 assign_area = chan['region']
                             elif 'channel_areas' in chan:
                                 assign_area = chan['channel_areas']
+
                             self.units.loc[chan_units,'area'] = assign_area
-                        
+                            
+                            self.units.loc[chan_units,'AP_coords'] = chan['AP']
+                            self.units.loc[chan_units,'DV_coords'] = chan['DV']
+                            self.units.loc[chan_units,'ML_coords'] = chan['ML']
                         
                         chan_units = self.good_units.query('peak_channel == @chan.channel and \
                                                                     probe == @probe').index
@@ -146,6 +157,10 @@ class Session:
                             elif 'channel_areas' in chan:
                                 assign_area = chan['channel_areas']
                             self.good_units.loc[chan_units,'area'] = assign_area
+        
+                            self.good_units.loc[chan_units,'AP_coords'] = chan['AP']
+                            self.good_units.loc[chan_units,'DV_coords'] = chan['DV']
+                            self.good_units.loc[chan_units,'ML_coords'] = chan['ML']
         
             self.units.loc[self.units['area'].isna(),'area']='N/A'
             self.good_units.loc[self.good_units['area'].isna(),'area']='N/A'
@@ -1241,7 +1256,7 @@ def plot_area_PSTHs_by_block(session,templeton_rec,criteria=0.3):
                ')  vis_speed='+str(np.round(attend_vis_trials['avg_run_speed'].mean(),decimals=1))+
                '  aud_speed='+str(np.round(attend_aud_trials['avg_run_speed'].mean(),decimals=1)))
         fig_name=aa+'_PSTH_by_block_'+session.metadata['mouseID']+'_'+str(session.metadata['ephys_session_num'])
-        fig_name.replace('/','-')
+        fig_name=fig_name.replace('/','-')
         
         # average PSTH across selected units & each stimulus
         stimuli = np.unique(session.trials['trialStimID'])
@@ -1308,7 +1323,7 @@ def plot_area_PSTHs_by_block(session,templeton_rec,criteria=0.3):
                     
         ax[ss].set_xlabel('time (s)')
         
-        fig.tight_layout()
+        # fig.tight_layout()
         
         fig.suptitle(fig_title)
         
@@ -1354,16 +1369,18 @@ def plot_area_PSTHs_by_response(session,templeton_rec,criteria=2):
         for unit_type_sel in unit_types:
         
             if unit_type_sel=='FS':
-                sel_units = session.good_units.query('area.str.contains(@area_sel) and duration<=0.4')
+                # sel_units = session.good_units.query('area.str.contains(@area_sel) and duration<=0.4')
+                sel_units = session.good_units.query('area==@area_sel and duration<=0.4')
             elif unit_type_sel=='RS':
-                sel_units = session.good_units.query('area.str.contains(@area_sel) and duration>0.4')
+                # sel_units = session.good_units.query('area.str.contains(@area_sel) and duration>0.4')
+                sel_units = session.good_units.query('area==@area_sel and duration>0.4')
                 
             fig_title=('area '+area_sel+' '+unit_type_sel+' (n='+str(len(sel_units))+
                        ')  vis_speed='+str(np.round(attend_vis_trials['avg_run_speed'].mean(),decimals=1))+
                        '  aud_speed='+str(np.round(attend_aud_trials['avg_run_speed'].mean(),decimals=1))+
                        ' dprime>='+str(criteria))
             fig_name=aa+'_'+unit_type_sel+'_PSTH_by_response_'+session.metadata['mouseID']+'_'+str(session.metadata['ephys_session_num'])
-            fig_name.replace('/','-')
+            fig_name=fig_name.replace('/','-')
             
             # average PSTH across selected units & each stimulus
             stimuli = np.unique(session.trials['trialStimID'])
@@ -1380,9 +1397,15 @@ def plot_area_PSTHs_by_response(session,templeton_rec,criteria=2):
             baseline_std = baseline.std(dim=['trials'])
             
             for stim in stimuli:
-                stim_trials = session.trials.query('trialStimID == @stim and \
-                                                    cross_modal_dprime >= 1.5 and\
-                                                    intra_modal_dprime >= 1.5')
+                if 'trialOptoVoltage' in session.trials: 
+                    stim_trials = session.trials.query('trialStimID == @stim and \
+                                                        cross_modal_dprime >= 1.5 and\
+                                                        intra_modal_dprime >= 1.5 and\
+                                                        trialOptoVoltage.isnull()')
+                else:
+                    stim_trials = session.trials.query('trialStimID == @stim and \
+                                                        cross_modal_dprime >= 1.5 and\
+                                                        intra_modal_dprime >= 1.5')
                 
                 stim_response_trials = {}
                 stim_response_trials['hit'] = stim_trials.query('trial_response == True and trialStimID == trialstimRewarded')
@@ -1454,7 +1477,7 @@ def plot_area_PSTHs_by_response(session,templeton_rec,criteria=2):
             
             fig.suptitle(fig_title)
             
-            fig.tight_layout()
+            # fig.tight_layout()
             
             fig.savefig(os.path.join(save_folder_path,fig_name+'.png'), dpi=300, format=None, metadata=None,
                         bbox_inches=None, pad_inches=0.1,
@@ -1465,7 +1488,7 @@ def plot_area_PSTHs_by_response(session,templeton_rec,criteria=2):
             plt.close(fig)
             
             fig_name=aa+'_'+unit_type_sel+'_PSTH_by_response_zscore_'+session.metadata['mouseID']+'_'+str(session.metadata['ephys_session_num'])
-            fig_name.replace('/','-')
+            fig_name=fig_name.replace('/','-')
             fig,ax=plt.subplots(5,1,figsize=(6,12),sharex=True,sharey=True)
 
             response_types = ['miss','cr','fa','hit']
@@ -1495,7 +1518,7 @@ def plot_area_PSTHs_by_response(session,templeton_rec,criteria=2):
             
             fig.suptitle(fig_title)
             
-            fig.tight_layout()
+            # fig.tight_layout()
             
             fig.savefig(os.path.join(save_folder_path,fig_name+'.png'), dpi=300, format=None, metadata=None,
                         bbox_inches=None, pad_inches=0.1,

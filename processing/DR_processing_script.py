@@ -96,28 +96,28 @@ def process_ephys_sessions(mainPath, mouseID, exp_num, session_date, metadata_on
     trials_df, frames_df = align_trial_times(trials_df, syncData, syncPath, nidaqPath, trialSoundArray, 
                                              trialSoundDur, soundSampleRate, deltaWheelPos, RF_first)
     
-    # unitData_df, spike_times, mean_waveforms = align_spike_times(ephysPath, syncData, probeNames, probeDirNames, 
-    #                                                              kilosortPath, startTime, mouseID, exp_num)
+    unitData_df, spike_times, mean_waveforms = align_spike_times(ephysPath, syncData, probeNames, probeDirNames, 
+                                                                  kilosortPath, startTime, mouseID, exp_num)
     
     lick_times = load_lick_times(syncPath)
             
-    # #RF mapping
-    # if len(rfPath)>0:
-    #     rfPath = rfPath[0]
-    #     rf_df, rf_trialSoundArray, rf_soundDur, rf_deltaWheelPos = load_rf_mapping(rfPath)
-    #     rf_df, rf_frames_df = align_rf_trial_times(rf_df, syncData, syncPath, nidaqPath, rf_trialSoundArray, 
-    #                                                rf_soundDur, soundSampleRate, rf_deltaWheelPos, RF_first)
+    #RF mapping
+    if len(rfPath)>0:
+        rfPath = rfPath[0]
+        rf_df, rf_trialSoundArray, rf_soundDur, rf_deltaWheelPos = load_rf_mapping(rfPath)
+        rf_df, rf_frames_df = align_rf_trial_times(rf_df, syncData, syncPath, nidaqPath, rf_trialSoundArray, 
+                                                    rf_soundDur, soundSampleRate, rf_deltaWheelPos, RF_first)
         
-    #     rf_df.to_csv(os.path.join(processedDataPath,'rf_mapping_trials.csv'))
-    #     rf_frames_df.to_csv(os.path.join(processedDataPath,'rf_mapping_frames.csv'))
+        rf_df.to_csv(os.path.join(processedDataPath,'rf_mapping_trials.csv'))
+        rf_frames_df.to_csv(os.path.join(processedDataPath,'rf_mapping_frames.csv'))
       
 
     ##Save individual files for each type of data
-    # np.save(os.path.join(processedDataPath,'spike_times_aligned.npy'),spike_times,allow_pickle=True)
-    # np.save(os.path.join(processedDataPath,'mean_waveforms.npy'),mean_waveforms,allow_pickle=True)
+    np.save(os.path.join(processedDataPath,'spike_times_aligned.npy'),spike_times,allow_pickle=True)
+    np.save(os.path.join(processedDataPath,'mean_waveforms.npy'),mean_waveforms,allow_pickle=True)
     np.save(os.path.join(processedDataPath,'lick_times.npy'),lick_times,allow_pickle=True)
     
-    # unitData_df.to_csv(os.path.join(processedDataPath,'unit_table.csv'))
+    unitData_df.to_csv(os.path.join(processedDataPath,'unit_table.csv'))
     trials_df.to_csv(os.path.join(processedDataPath,'trials_table.csv'))
     frames_df.to_csv(os.path.join(processedDataPath,'frames_table.csv'))
     
@@ -154,34 +154,34 @@ mainPaths = [
     # r"Y:\2023-02-28_09-33-43_649944",
     
     #DR pilot
-    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220815", #re-run with new datajoint output
-    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220816", #re-run with new datajoint output
-    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220817", #re-run with new datajoint output
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220815", #re-run with new datajoint output
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220816", #re-run with new datajoint output
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220817", #re-run with new datajoint output
     
-    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230123", 
-    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230124", 
-    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230125", 
-    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230126", 
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230123", 
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230124", 
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230125", 
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230126", 
     
     r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230130",
     r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230131", 
     r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230201", 
     r"\\allen\programs\mindscope\workgroups\np-exp\PilotEphys\Task 2 pilot\DRpilot_644864_20230202",
     
-    r"\\allen\programs\mindscope\workgroups\np-exp\PilotEphys\Task 2 pilot\DRpilot_644866_20230207",
-    r"Y:\DRpilot_644866_20230208",
-    r"Y:\DRpilot_644866_20230209",
-    r"Y:\DRpilot_644866_20230210",
+    # r"\\allen\programs\mindscope\workgroups\np-exp\PilotEphys\Task 2 pilot\DRpilot_644866_20230207", ##error when re-running
+    # r"Y:\DRpilot_644866_20230208",
+    # r"Y:\DRpilot_644866_20230209",
+    # r"Y:\DRpilot_644866_20230210",
     
-    r"Y:\DRpilot_644867_20230220",
-    r"Y:\DRpilot_644867_20230221",
-    r"Y:\DRpilot_644867_20230222",
-    r"Y:\DRpilot_644867_20230223",
+    # r"Y:\DRpilot_644867_20230220",
+    # r"Y:\DRpilot_644867_20230221",
+    # r"Y:\DRpilot_644867_20230222",
+    # r"Y:\DRpilot_644867_20230223",
     
-    r"Y:\DRpilot_649943_20230213", 
-    r"Y:\DRpilot_649943_20230214",
-    r"Y:\DRpilot_649943_20230215",
-    r"Y:\DRpilot_649943_20230216",
+    # r"Y:\DRpilot_649943_20230213", 
+    # r"Y:\DRpilot_649943_20230214",
+    # r"Y:\DRpilot_649943_20230215",
+    # r"Y:\DRpilot_649943_20230216",
     
     ]
 
@@ -194,22 +194,22 @@ exp_nums = [
     # 1,2, #635891
     # 1,2, #636760
     
-    #templeton pilot
-    1,2, #620263
-    1, #620264
-    1, #628801
-    1,2, #636397
-    1,2, #644547
-    1,2, #646318
-    1,2, #649944
+    # #templeton pilot
+    # 1,2, #620263
+    # 1, #620264
+    # 1, #628801
+    # 1,2, #636397
+    # 1,2, #644547
+    # 1,2, #646318
+    # 1,2, #649944
     
     #DR pilot
-    1,2,3, #626791
-    1,2,3,4, #636766
+    # 1,2,3, #626791
+    # 1,2,3,4, #636766
     1,2,3,4, #644864
-    1,2,3,4, #644866
-    1,2,3,4, #644867
-    1,2,3,4, #649943
+    # 1,2,3,4, #644866
+    # 1,2,3,4, #644867
+    # 1,2,3,4, #649943
     ]
 
 for im,mm in enumerate(mainPaths[:]):

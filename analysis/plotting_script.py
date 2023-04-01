@@ -28,10 +28,11 @@ def plot_data(mainPath):
     
     session =  compute_smoothed_response_rate(session)
     
+    ##re-run when aud_autoreward is fixed on all recordings
     plot_smoothed_response_rate(session, mainPath, templeton_rec)
      
-    #make trial-based data array
-    session.trial_da = make_trial_da(session.good_units, session.spike_times, session.trials)
+    # #make trial-based data array
+    # session.trial_da = make_trial_da(session.good_units, session.spike_times, session.trials)
     
     # #plot heatmaps function
     # plot_heatmaps(mainPath, session.trial_da, session.trials, session.good_units, templeton_rec)
@@ -48,7 +49,7 @@ def plot_data(mainPath):
     
     
     # plot_area_PSTHs_by_block(session,templeton_rec)
-    plot_area_PSTHs_by_response(session,templeton_rec)
+    # plot_area_PSTHs_by_response(session,templeton_rec)
     
     
     
