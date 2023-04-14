@@ -50,7 +50,10 @@ def process_ephys_sessions(mainPath, mouseID, exp_num, session_date, metadata_on
     
     
     kilosortPath = glob.glob(os.path.join(datajointPath,'*'+mouseID+'_'+session_date,'*probe*_sorted','continuous','Neuropix-PXI-100.0'))
-    if not os.path.isfile(os.path.join(kilosortPath[0],'spike_clusters.npy')):
+    if len(kilosortPath)>0:
+        if not os.path.isfile(os.path.join(kilosortPath[0],'spike_clusters.npy')):
+            kilosortPath = glob.glob(os.path.join(mainPath,'Record Node*','experiment*','recording*','continuous','*-AP'))
+    else:
         kilosortPath = glob.glob(os.path.join(mainPath,'Record Node*','experiment*','recording*','continuous','*-AP'))
     # else:
     #     kilosortPath = glob.glob(os.path.join(datajointPath,'*'+mouseID+'_'+session_date,'*probe*_sorted','continuous','Neuropix-PXI-100.0'))
@@ -136,8 +139,8 @@ mainPaths = [
     #opto pilot
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\opto pilot\2022-11-07_12-31-20_635891",
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\opto pilot\2022-11-08_11-03-58_635891",
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\opto pilot\2022-11-14_13-18-05_636760", #error w/ vsync/photodiode?
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\opto pilot\2022-11-15_14-02-31_636760", #error w/ vsync/photodiode?
+    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\opto pilot\2022-11-14_13-18-05_636760", #error w/ vsync/photodiode?
+    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\opto pilot\2022-11-15_14-02-31_636760", #error w/ vsync/photodiode?
     
     # #templeton pilot
     # r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-07-26_14-09-36_620263",
@@ -163,10 +166,10 @@ mainPaths = [
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230125", 
     # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230126", 
     
-    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230130",
-    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230131", 
-    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230201", 
-    r"\\allen\programs\mindscope\workgroups\np-exp\PilotEphys\Task 2 pilot\DRpilot_644864_20230202",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230130",
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230131", 
+    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230201", 
+    # r"\\allen\programs\mindscope\workgroups\np-exp\PilotEphys\Task 2 pilot\DRpilot_644864_20230202",
     
     # r"\\allen\programs\mindscope\workgroups\np-exp\PilotEphys\Task 2 pilot\DRpilot_644866_20230207", ##error when re-running
     # r"Y:\DRpilot_644866_20230208",
@@ -192,7 +195,7 @@ exp_nums = [
     
     #opto pilot
     # 1,2, #635891
-    # 1,2, #636760
+    1,2, #636760
     
     # #templeton pilot
     # 1,2, #620263
@@ -206,7 +209,7 @@ exp_nums = [
     #DR pilot
     # 1,2,3, #626791
     # 1,2,3,4, #636766
-    1,2,3,4, #644864
+    # 1,2,3,4, #644864
     # 1,2,3,4, #644866
     # 1,2,3,4, #644867
     # 1,2,3,4, #649943

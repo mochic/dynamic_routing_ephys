@@ -15,12 +15,13 @@ import pandas as pd
 import xarray as xr
 import scipy.signal as sg
 import scipy.stats as st
+import statsmodels.stats.multitest as stmulti
 import matplotlib.pyplot as plt
 from matplotlib import patches
 import pickle
 import os
 import glob
-
+import re
 
 #Simple session class for analyzing DR data
 class Session:
@@ -103,8 +104,8 @@ class Session:
         #compute average run speed for each trial
         avg_run_speed=np.zeros(len(self.trials))
         for tt in range(0,len(self.trials)):
-            startFrame=self.trials['trialStartFrame'].iloc[tt]
-            endFrame=self.trials['trialStimStartFrame'].iloc[tt]
+            startFrame=self.trials['trialStimStartFrame'].iloc[tt]-66
+            endFrame=self.trials['trialStimStartFrame'].iloc[tt]-6
             avg_run_speed[tt]=np.nanmean(self.frames['runningSpeed'][startFrame:endFrame])
         self.trials['avg_run_speed'] = avg_run_speed
         
@@ -145,9 +146,9 @@ class Session:
 
                             self.units.loc[chan_units,'area'] = assign_area
                             
-                            self.units.loc[chan_units,'AP_coords'] = chan['AP']
-                            self.units.loc[chan_units,'DV_coords'] = chan['DV']
-                            self.units.loc[chan_units,'ML_coords'] = chan['ML']
+                            self.units.loc[chan_units,'AP_coord'] = chan['AP']
+                            self.units.loc[chan_units,'DV_coord'] = chan['DV']
+                            self.units.loc[chan_units,'ML_coord'] = chan['ML']
                         
                         chan_units = self.good_units.query('peak_channel == @chan.channel and \
                                                                     probe == @probe').index
@@ -158,9 +159,9 @@ class Session:
                                 assign_area = chan['channel_areas']
                             self.good_units.loc[chan_units,'area'] = assign_area
         
-                            self.good_units.loc[chan_units,'AP_coords'] = chan['AP']
-                            self.good_units.loc[chan_units,'DV_coords'] = chan['DV']
-                            self.good_units.loc[chan_units,'ML_coords'] = chan['ML']
+                            self.good_units.loc[chan_units,'AP_coord'] = chan['AP']
+                            self.good_units.loc[chan_units,'DV_coord'] = chan['DV']
+                            self.good_units.loc[chan_units,'ML_coord'] = chan['ML']
         
             self.units.loc[self.units['area'].isna(),'area']='N/A'
             self.good_units.loc[self.good_units['area'].isna(),'area']='N/A'
@@ -168,6 +169,31 @@ class Session:
         else:
             print('tissuecyte folder not found')
             self.manual_assign_unit_areas()
+            
+        #shorten the area names to better lump together units
+        #get rid of layers and/or sub-areas with dashes
+        area_short = []
+        for area in self.good_units['area']:
+            if area=='N/A':
+                short='N/A'
+            elif area[:2]=='CA':
+                short=area
+            else:
+                dig_ind=re.search(r"\d", area)
+                dash_ind=re.search(r"-", area)
+                if dig_ind!=None:
+                    short=area[:dig_ind.start()]
+                elif dash_ind!=None:
+                    short=area[:dash_ind.start()]
+                else:
+                    short=area
+                
+            area_short.append(short)
+            
+        self.good_units['area_short']=area_short
+            
+            
+        
             
             
     def manual_assign_unit_areas(self):
@@ -1066,7 +1092,7 @@ def compute_smoothed_response_rate(session,trials_to_smooth=5):
     for ss in stims:
 
         stimTrials=session.trials.query('trialStimID == @ss')
-        stimTrials[ss+'_smooth']=sg.convolve(stimTrials['trial_response'].values,gwindow,mode='same')/np.sum(gwindow)
+        stimTrials.loc[:,ss+'_smooth']=sg.convolve(stimTrials.loc[:,'trial_response'].values,gwindow,mode='same')/np.sum(gwindow)
         interp_func=sp.interpolate.interp1d(stimTrials.index,stimTrials[ss+'_smooth'])
     
         xnew=np.arange(np.min(stimTrials.index),np.max(stimTrials.index))
@@ -1527,3 +1553,269 @@ def plot_area_PSTHs_by_response(session,templeton_rec,criteria=2):
                        )
 
             plt.close(fig)
+
+# %%
+def compute_stimulus_response(session):
+    
+    # define time window (0-200ms?)
+    prestim_win = [-0.2,0.0]
+    stim_win = [0.0,0.2]
+    
+    # sum spikes in these time windows
+    pre_stim_response_da = session.trial_da.sel(time=slice(prestim_win[0],prestim_win[1])).mean(dim='time')
+    stim_response_da = session.trial_da.sel(time=slice(stim_win[0],stim_win[1])).mean(dim='time')
+    
+    # # record the mean change (and sign)
+    # stim_evoked=stim_response_da-pre_stim_response_da
+    
+    n_units=len(session.good_units)
+    
+    stim_response_p={}
+    stim_response_p_adj={}
+    stim_response_avg={}
+    stimuli = session.trials['trialStimID'].unique()
+    # stimuli = ['vis1','vis2','sound1','sound2','catch']
+    for stim in stimuli:
+        stim_response_p[stim+'_sig']=np.zeros((n_units))
+        stim_response_p[stim+'_sig'][:]=np.nan
+        stim_response_p_adj[stim+'_sig']=np.zeros((n_units))
+        stim_response_p_adj[stim+'_sig'][:]=np.nan
+        stim_response_avg[stim+'_resp']=np.zeros((n_units))
+        stim_response_avg[stim+'_resp'][:]=np.nan
+        
+    all_pvals=[]
+    all_stim_ind=[]
+    #loop through stimuli
+    for stim_ind,stim in enumerate(stimuli):
+        stim_trials = session.trials.query('trialStimID == @stim and \
+                                            aud_autoreward_trials == False and \
+                                            vis_autoreward_trials == False').index
+        
+        for ui,unit_sel in enumerate(session.good_units.index):
+            
+            # statistical test pre vs. stim FR
+            pre_stim_sel_unit = pre_stim_response_da.sel(unit_id=unit_sel,trials=stim_trials)
+            stim_sel_unit = stim_response_da.sel(unit_id=unit_sel,trials=stim_trials)
+            
+            if np.all((stim_sel_unit.values-pre_stim_sel_unit.values)!=0):
+                h,stim_response_p[stim+'_sig'][ui]=st.wilcoxon(pre_stim_sel_unit.values,stim_sel_unit.values)
+            else:
+                stim_response_p[stim+'_sig'][ui]=1
+                
+            stim_response_avg[stim+'_resp'][ui]=(np.nanmean(stim_sel_unit.values-pre_stim_sel_unit.values)/
+                                         np.nanstd(pre_stim_sel_unit.values))
+            
+        all_pvals.append(stim_response_p[stim])
+        all_stim_ind.append(np.ones(len(stim_response_p[stim]))*stim_ind)
+        
+    ########
+    # keep track of how many tests, do multiple comparisons corrections
+    all_pvals=np.hstack(all_pvals)
+    all_stim_ind=np.hstack(all_stim_ind)
+    hyp_test,adj_pvals=stmulti.fdrcorrection(all_pvals,alpha=0.05,method='indep')  
+    # translate back to lists for each stimulus
+    
+    for stim_ind,stim in enumerate(stimuli):
+        stim_response_p_adj[stim+'_sig']=adj_pvals[all_stim_ind==stim_ind]
+        
+        
+    unit_selectivity = pd.DataFrame(stim_response_p_adj,columns=['vis1_sig','vis2_sig','sound1_sig','sound2_sig','catch_sig'],
+                                  index=session.good_units.index)<0.05
+    
+    unit_response = pd.DataFrame(stim_response_avg,
+                             columns=['vis1_resp','vis2_resp','sound1_resp','sound2_resp','catch_resp'],
+                             index=session.good_units.index)
+    
+    session.good_units = pd.concat([session.good_units,unit_selectivity,unit_response],axis=1)
+    
+    return session
+
+
+# %%
+def compute_block_modulation(session):
+    
+    # define time window (0-100ms?)
+    prestim_win = [-0.2,0.0]
+    stim_win = [0.0,0.2]
+    
+    # sum spikes in these time windows
+    pre_stim_response_da = session.trial_da.sel(time=slice(prestim_win[0],prestim_win[1])).mean(dim='time')
+    stim_response_da = session.trial_da.sel(time=slice(stim_win[0],stim_win[1])).mean(dim='time')
+    
+    n_units=len(session.good_units)
+    
+    time_windows = ['block_diff_pre_sig','block_diff_stim_sig']
+
+    pre_block_diff_p=np.zeros((n_units))
+    pre_block_diff_p[:]=np.nan
+    pre_block_diff_avg=np.zeros((n_units))
+    pre_block_diff_avg[:]=np.nan
+    
+    stim_block_diff_p=np.zeros((n_units))
+    stim_block_diff_p[:]=np.nan
+    stim_block_diff_avg=np.zeros((n_units))
+    stim_block_diff_avg[:]=np.nan
+    
+    all_pvals=[]
+    all_ind=[]
+    
+    vis_block_trials = session.trials.query('trialstimRewarded == "vis1" and \
+                                         aud_autoreward_trials == False and \
+                                         vis_autoreward_trials == False and \
+                                         cross_modal_dprime >= 1.5').index
+    
+    aud_block_trials = session.trials.query('trialstimRewarded == "sound1" and \
+                                         aud_autoreward_trials == False and \
+                                         vis_autoreward_trials == False and \
+                                         cross_modal_dprime >= 1.5').index
+    
+    for ui,unit_sel in enumerate(session.good_units.index):
+    
+        # statistical test pre vs. stim FR
+        pre_stim_sel_unit_vis = pre_stim_response_da.sel(unit_id=unit_sel,trials=vis_block_trials)
+        pre_stim_sel_unit_aud = pre_stim_response_da.sel(unit_id=unit_sel,trials=aud_block_trials)
+        pre_stim_all = pre_stim_response_da.sel(unit_id=unit_sel)
+        
+        stim_sel_unit_vis = stim_response_da.sel(unit_id=unit_sel,trials=vis_block_trials)
+        stim_sel_unit_aud = stim_response_da.sel(unit_id=unit_sel,trials=aud_block_trials)
+        stim_all = stim_response_da.sel(unit_id=unit_sel)
+        
+
+        h,pre_block_diff_p[ui]=st.ranksums(pre_stim_sel_unit_vis.values,pre_stim_sel_unit_aud.values)
+
+        pre_block_diff_avg[ui]=((np.nanmean(pre_stim_sel_unit_vis.values)-np.nanmean(pre_stim_sel_unit_aud.values))/
+                                      np.nanstd(pre_stim_all.values))
+        
+        h,stim_block_diff_p[ui]=st.ranksums(stim_sel_unit_vis.values,stim_sel_unit_aud.values)
+
+        stim_block_diff_avg[ui]=((np.nanmean(stim_sel_unit_vis.values)-np.nanmean(stim_sel_unit_aud.values))/
+                                      np.nanstd(stim_all.values))
+        
+    
+    all_pvals.append(pre_block_diff_p)
+    all_ind.append(np.ones(len(pre_block_diff_p))*0)
+    
+    all_pvals.append(stim_block_diff_p)
+    all_ind.append(np.ones(len(stim_block_diff_p))*1)
+    
+    
+    ########
+    # keep track of how many tests, do multiple comparisons corrections
+    all_pvals=np.hstack(all_pvals)
+    all_ind=np.hstack(all_ind)
+    hyp_test,adj_pvals=stmulti.fdrcorrection(all_pvals,alpha=0.05,method='indep')  
+    
+    # translate back to lists for each stimulus
+    block_diff_p_adj={}
+    for t_ind,t_wind in enumerate(time_windows):
+        block_diff_p_adj[t_wind]=adj_pvals[all_ind==t_ind]
+        
+    block_selectivity=pd.DataFrame(block_diff_p_adj,columns=['block_diff_pre_sig','block_diff_stim_sig'],
+                                   index=session.good_units.index)<0.05
+    
+    block_diffs = pd.DataFrame({'block_diff_pre':pre_block_diff_avg,'block_diff_stim':stim_block_diff_avg},
+                               index=session.good_units.index)
+    
+    session.good_units = pd.concat([session.good_units,block_selectivity,block_diffs],axis=1)
+    
+    return session
+
+# %%
+def plot_block_modulated_PSTHs(session,templeton_rec):
+    
+    if templeton_rec==True:
+        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\plots"
+        prefix = r"TempletonPilot"
+    else:
+        save_folder_mainPath = r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\plots"
+        prefix = r"DRpilot"
+ 
+    session_folder=prefix+'_'+session.metadata['mouseID']+'_'+session.metadata['session_date']
+          
+    save_folder_path = os.path.join(save_folder_mainPath,session_folder,'block_modulated_PSTHs')
+    
+    if os.path.isdir(os.path.join(save_folder_mainPath,session_folder))==False:
+            os.mkdir(os.path.join(save_folder_mainPath,session_folder))
+    if os.path.isdir(save_folder_path)==False:
+            os.mkdir(save_folder_path)
+    
+    unique_areas=session.good_units['area_short'].unique()
+    
+    gwindow = sg.gaussian(25, std=10)
+ 
+    vis_block_trials = session.trials.query('trialstimRewarded == "vis1" and \
+                                         aud_autoreward_trials == False and \
+                                         vis_autoreward_trials == False and \
+                                         cross_modal_dprime >= 1.5')
+    
+    aud_block_trials = session.trials.query('trialstimRewarded == "sound1" and \
+                                         aud_autoreward_trials == False and \
+                                         vis_autoreward_trials == False and \
+                                         cross_modal_dprime >= 1.5')
+    
+    plot_stimuli=['vis1','vis2','sound1','sound2','catch']
+    
+    #loop through areas, plot avg PSTHs for each
+    for aa in unique_areas:
+        
+        block_mod_increased_units=session.good_units.query('block_diff_pre_sig == True and block_diff_pre>0 and \
+                                                            area_short == @aa')
+        block_mod_decreased_units=session.good_units.query('block_diff_pre_sig == True and block_diff_pre<0 and \
+                                                            area_short == @aa')
+        non_block_mod_units=session.good_units.query('block_diff_pre_sig == False and area_short == @aa')
+        
+        
+        
+        fig,ax=plt.subplots(3,5,sharex=True,sharey=True,figsize=(15,8))
+        plot_colors=['b','r']
+        for ss,stim in enumerate(plot_stimuli):
+            for tr,trial_sel in enumerate([vis_block_trials,aud_block_trials]):
+                
+                if 'trialOptoVoltage' in session.trials.columns:
+                    trial_stim_sel = trial_sel.query('trialOptoVoltage.isnull() and trialStimID==@stim').index
+                else:
+                    trial_stim_sel = trial_sel.query('trialStimID==@stim').index
+    
+                block_mod_increased_da=session.trial_da.sel(unit_id=block_mod_increased_units.index,
+                                                            trials=trial_stim_sel).mean(dim=['trials','unit_id'])
+    
+                block_mod_decreased_da=session.trial_da.sel(unit_id=block_mod_decreased_units.index,
+                                                            trials=trial_stim_sel).mean(dim=['trials','unit_id'])
+    
+                non_block_mod_da=session.trial_da.sel(unit_id=non_block_mod_units.index,
+                                                      trials=trial_stim_sel).mean(dim=['trials','unit_id'])
+    
+                block_mod_increased_smoothed=sg.convolve(block_mod_increased_da.values,gwindow,mode='same')/np.sum(gwindow)
+                block_mod_decreased_smoothed=sg.convolve(block_mod_decreased_da.values,gwindow,mode='same')/np.sum(gwindow)
+                non_block_mod_smoothed=sg.convolve(non_block_mod_da.values,gwindow,mode='same')/np.sum(gwindow)
+    
+                ax[0,ss].plot(non_block_mod_da.time,non_block_mod_smoothed,color=plot_colors[tr])
+                ax[1,ss].plot(block_mod_decreased_da.time,block_mod_decreased_smoothed,color=plot_colors[tr])
+                ax[2,ss].plot(block_mod_increased_da.time,block_mod_increased_smoothed,color=plot_colors[tr])
+            
+            for xx in range(0,3):
+                ax[xx,ss].set_xlim([-0.5,1.0])
+                ax[xx,ss].axvline(0,color='k',linestyle='--',linewidth=0.75)
+                ax[xx,ss].axvline(0.5,color='k',linestyle='--',linewidth=0.75)
+                if ss==0:
+                    ax[xx,ss].set_ylabel('FR (Hz)')
+            
+            ax[0,ss].legend(['vis block','aud block'])
+            ax[0,ss].set_title(stim+'; '+'non block mod n='+str(len(non_block_mod_units.index)))
+            ax[1,ss].set_title(stim+'; '+'aud block preferring n='+str(len(block_mod_decreased_units.index)))
+            ax[2,ss].set_title(stim+'; '+'vis block preferring n='+str(len(block_mod_increased_units.index)))
+            ax[2,ss].set_xlabel('time rel to stimulus (s)')
+        
+        fig.suptitle('area: '+aa+' '+session.metadata['mouseID']+' '+str(session.metadata['ephys_session_num']))
+        fig.tight_layout()
+        
+        fig_name=aa+'_block_modulated_PSTHs_'+session.metadata['mouseID']+'_'+str(session.metadata['ephys_session_num'])
+        fig_name=fig_name.replace('/','-')
+        
+        fig.savefig(os.path.join(save_folder_path,fig_name+'.png'), dpi=300, format=None, metadata=None,
+                    bbox_inches=None, pad_inches=0.1,
+                    facecolor='auto', edgecolor='auto',
+                    backend=None,
+                   )
+
+        plt.close(fig)

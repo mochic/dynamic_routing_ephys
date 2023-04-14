@@ -795,7 +795,10 @@ def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, kilosortPa
             # add unit metrics by cluster id
             for key in unit_metrics.keys():
                 if key not in unitData.keys():
-                    unitData[key]=[]
+                    if 'epoch_name' not in key:
+                        unitData[key]=[]
+                    else:
+                        continue
                 if u in unit_metrics.index.values:
                     unitData[key].append(unit_metrics[key].loc[u])
                 else:
@@ -804,7 +807,10 @@ def align_spike_times(ephysPath, syncData, probeNames, probeDirNames, kilosortPa
             # add waveform metrics by cluster id
             for key in waveform_metrics.keys():
                 if key not in unitData.keys():
-                    unitData[key]=[]
+                    if 'epoch_name' not in key:
+                        unitData[key]=[]
+                    else:
+                        continue
                 if u in waveform_metrics.index.values and key not in unit_metrics.keys():
                     unitData[key].append(waveform_metrics[key].loc[u])
                 elif key not in unit_metrics.keys():

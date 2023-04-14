@@ -11,6 +11,7 @@ from DR_analysis_utils import Session, makePSTH, make_neuron_time_trials_tensor
 from DR_analysis_utils import make_trial_da, plot_rasters, plot_heatmaps, plot_rew_nonrew_rasters
 from DR_analysis_utils import plot_stim_vs_lick_aligned_rasters, plot_smoothed_response_rate
 from DR_analysis_utils import compute_smoothed_response_rate, plot_area_PSTHs_by_block, plot_area_PSTHs_by_response
+from DR_analysis_utils import compute_block_modulation, compute_stimulus_response, plot_block_modulated_PSTHs
 
 # %%
 def plot_data(mainPath):
@@ -28,11 +29,11 @@ def plot_data(mainPath):
     
     session =  compute_smoothed_response_rate(session)
     
-    ##re-run when aud_autoreward is fixed on all recordings
-    plot_smoothed_response_rate(session, mainPath, templeton_rec)
+    # ##re-run when aud_autoreward is fixed on all recordings
+    # plot_smoothed_response_rate(session, mainPath, templeton_rec)
      
-    # #make trial-based data array
-    # session.trial_da = make_trial_da(session.good_units, session.spike_times, session.trials)
+    #make trial-based data array
+    session.trial_da = make_trial_da(session.good_units, session.spike_times, session.trials)
     
     # #plot heatmaps function
     # plot_heatmaps(mainPath, session.trial_da, session.trials, session.good_units, templeton_rec)
@@ -51,6 +52,8 @@ def plot_data(mainPath):
     # plot_area_PSTHs_by_block(session,templeton_rec)
     # plot_area_PSTHs_by_response(session,templeton_rec)
     
+    session=compute_block_modulation(session)
+    plot_block_modulated_PSTHs(session, templeton_rec)
     
     
     session=None
@@ -94,10 +97,10 @@ mainPaths = [
     r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230125\processed", 
     r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230126\processed", 
     
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230130\processed",
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230131\processed", 
-    # r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230201\processed", 
-    # r"\\allen\programs\mindscope\workgroups\np-exp\PilotEphys\Task 2 pilot\DRpilot_644864_20230202\processed",
+    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230130\processed",
+    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230131\processed", 
+    r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230201\processed", 
+    r"\\allen\programs\mindscope\workgroups\np-exp\PilotEphys\Task 2 pilot\DRpilot_644864_20230202\processed",
     
     # r"\\allen\programs\mindscope\workgroups\np-exp\PilotEphys\Task 2 pilot\DRpilot_644866_20230207\processed",
     # r"Y:\DRpilot_644866_20230208\processed",
