@@ -6,7 +6,7 @@ import hashlib
 from DR_processing_script import process_ephys_sessions
 
 
-def generate_checksum(filepath: str) -> hashlib._Hash:
+def generate_checksum(filepath: str) -> hashlib._hashlib.HASH:
     with open(filepath, "r") as f:
         contents = f.read()
 
@@ -22,7 +22,7 @@ EXP_NUMS = (1, 2, )
 
 
 @pytest.mark.skipif(MAIN_PATH.exists(), reason="Required test inputs cannot be found.")
-def test_basic(temp_dir):
+def test_basic(tmpdir):
     """Computes the rf mapping and trials tables and verifies that their 
     contents match a previously computed result
     """
