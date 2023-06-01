@@ -2,8 +2,7 @@ import pathlib
 import pytest
 import hashlib
 
-# from processing.DR_processing_script import process_ephys_sessions
-from DR_processing_script import process_ephys_sessions
+from __main__ import process_session
 
 
 def generate_checksum(filepath: str) -> hashlib._hashlib.HASH:

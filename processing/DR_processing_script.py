@@ -25,9 +25,118 @@ from DR_processing_utils import align_spike_times, load_lick_times, define_RF_fi
 from DR_processing_utils import load_sound_pilot_data, sync_data_streams_sound_pilot
 
 # %%
+EXP_MAP = {
+    # sound pilot
+    "625820": [
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\625820_06222022\2022-06-22_14-25-10",
+    ],
+    "625821": [
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\625821_07112022\2022-07-11_14-42-15",
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\625821_07122022\2022-07-12_13-51-39",
+    ],
+    # opto pilot
+    "635891": [
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\opto pilot\2022-11-07_12-31-20_635891",
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\opto pilot\2022-11-08_11-03-58_635891",
+    ],
+    "636760": [
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\opto pilot\2022-11-14_13-18-05_636760",
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\opto pilot\2022-11-15_14-02-31_636760",
+    ],
+    # #templeton pilot
+    "620263": [
+        r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-07-26_14-09-36_620263",
+        r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-07-27_13-57-17_620263",
+    ],
+    "620264": [
+        r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-08-02_15-40-19_620264",
+    ],
+    "628801": [
+        r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-09-19_13-48-26_628801"
+    ],
+    "636397": [
+        r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-09-26_12-48-09_636397",
+        r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-09-27_11-37-08_636397",
+    ],
+    "644547": [
+        r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-12-05_13-08-02_644547",
+        r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2022-12-06_12-35-35_644547",
+    ],
+    "646318": [
+        r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2023-01-17_11-39-17_646318",
+        r"\\allen\programs\mindscope\workgroups\templeton\TTOC\pilot recordings\2023-01-18_10-44-55_646318",
+    ],
+    "649944": [
+        r"Y:\2023-02-27_08-14-30_649944",
+        r"Y:\2023-02-28_09-33-43_649944",
+    ],
+    # DR pilot
+    "626791": [
+        # re-run with new datajoint output
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220815",
+        # re-run with new datajoint output
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220816",
+        # re-run with new datajoint output
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220817",
+    ],
+    "636766": [
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230123",
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230124",
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230125",
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_636766_20230126",
+    ],
+    "644864": [
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230130",
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230131",
+        r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_644864_20230201",
+        r"\\allen\programs\mindscope\workgroups\np-exp\PilotEphys\Task 2 pilot\DRpilot_644864_20230202",
+    ],
+    "644866": [
+        # error when re-running
+        r"\\allen\programs\mindscope\workgroups\np-exp\PilotEphys\Task 2 pilot\DRpilot_644866_20230207",
+        r"Y:\DRpilot_644866_20230208",
+        r"Y:\DRpilot_644866_20230209",
+        r"Y:\DRpilot_644866_20230210",
+    ],
+    "644867": [
+        r"Y:\DRpilot_644867_20230220",
+        r"Y:\DRpilot_644867_20230221",
+        r"Y:\DRpilot_644867_20230222",
+        r"Y:\DRpilot_644867_20230223",
+    ],
+    "649943": [
+        r"Y:\DRpilot_649943_20230213",
+        r"Y:\DRpilot_649943_20230214",
+        r"Y:\DRpilot_649943_20230215",
+        r"Y:\DRpilot_649943_20230216",
+    ],
+}
 
 
-def process_ephys_sessions(mainPath, mouseID, exp_num, session_date, metadata_only):
+def get_exp_number(mouse_id: str, session_output_dir: str) -> int:
+    """Polyfil for a future better piece of code to get this
+    """
+    try:
+        session_output_dirs = EXP_MAP[mouse_id]
+    except KeyError:
+        raise Exception("Unsupported. mouse_id=%s" % mouse_id)
+
+    try:
+        # downstream expects 1-based
+        return session_output_dirs.index(session_output_dir) + 1
+    except ValueError:
+        raise Exception("Unsupported. session_output_dir=%s" %
+                        session_output_dir)
+
+
+def process_ephys_sessions(
+        mainPath: str,
+        mouseID: str,
+        session_date: str,
+        metadata_only: bool,
+        processedDataPath: str,
+):
+    exp_num = get_exp_number(mouseID, mainPath)
     # To do: function for automatically detecting whether RF was first or second
     RF_first = define_RF_first(mouseID)
 
@@ -48,9 +157,9 @@ def process_ephys_sessions(mainPath, mouseID, exp_num, session_date, metadata_on
     nidaqPath = glob.glob(os.path.join(
         mainPath, 'Record Node*', 'experiment*', 'recording*', 'continuous', 'NI-DAQmx*'))
     if len(ephysPath) == 0:
-        ephysPath = glob.glob(os.path.join(mm, '*_'+mouseID+'*', 'Record Node*',
+        ephysPath = glob.glob(os.path.join(mainPath, '*_'+mouseID+'*', 'Record Node*',
                               'experiment*', 'recording*', 'continuous', '*-AP'))  # [0]
-        nidaqPath = glob.glob(os.path.join(mm, '*_'+mouseID+'*', 'Record Node*',
+        nidaqPath = glob.glob(os.path.join(mainPath, '*_'+mouseID+'*', 'Record Node*',
                               'experiment*', 'recording*', 'continuous', 'NI-DAQmx*'))
 
     kilosortPath = glob.glob(os.path.join(datajointPath, '*'+mouseID+'_' +
@@ -67,8 +176,6 @@ def process_ephys_sessions(mainPath, mouseID, exp_num, session_date, metadata_on
 
     # assumes that sync file is the only .h5!
     syncPath = glob.glob(os.path.join(mainPath, '*.h5'))[0]
-    # processedDataPath = os.path.join(mainPath, 'processed')
-    processedDataPath = os.environ["PROCESSED_DATA_PATH"]
 
     if os.path.isdir(processedDataPath) == False:
         os.mkdir(processedDataPath)
