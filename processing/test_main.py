@@ -5,11 +5,11 @@ import hashlib
 from DR_processing_script import process_ephys_sessions, infer_exp_meta
 
 
-def generate_checksum(filepath: str) -> hashlib._hashlib.HASH:
+def generate_checksum(filepath: str) -> bytes:
     with open(filepath, "r") as f:
         contents = f.read()
 
-    return hashlib.md5(contents)
+    return hashlib.md5(contents).digest()
 
 
 MAIN_PATH = pathlib.Path(
@@ -38,9 +38,25 @@ def test_basic(tmpdir):
 
     main_path = str(MAIN_PATH)
     mouse_id, session_date = infer_exp_meta(main_path)
+
     print("Inferred: mouse_id=%s session_date=%s" % (mouse_id, session_date, ))
+
     process_ephys_sessions(
         main_path, mouse_id, session_date, False, str(output_dir))
 
-    assert (output_dir / "trials_table.csv").exists(), \
+    trials_table_path = output_dir / "trials_table.csv"
+    assert trials_table_path.exists(), \
         "Trials table should exist where we expect it to."
+
+    rf_mapping_table_path = output_dir / "rf_mapping_trials.csv"
+
+    assert rf_mapping_table_path.exists(), \
+        "RF mapping table should exist where we expect it to."
+
+    assert generate_checksum(str(EXPECTED_TRIALS_TABLE_PATH)) == \
+        generate_checksum(str(trials_table_path)), \
+        "Trials table content should match expected result"
+
+    assert generate_checksum(str(EXPECTED_RF_MAPPING_TABLE_PATH)) == \
+        generate_checksum(str(rf_mapping_table_path)), \
+        "RF mapping table content should match expected result"
