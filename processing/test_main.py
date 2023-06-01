@@ -34,9 +34,13 @@ def test_basic(tmpdir):
     """Computes the rf mapping and trials tables and verifies that their 
     contents match a previously computed result
     """
-    output_dir = tmpdir.mkdir("output").posix()
-    print(output_dir)
+    output_dir = tmpdir.mkdir("output")
 
-    raise Exception("bur")
-    # process_ephys_sessions(
-    #     mm, mouseID, exp_nums[im], session_date, False)
+    main_path = MAIN_PATH.posix()
+    mouse_id, session_date = infer_exp_meta(MAIN_PATH.posix())
+
+    process_ephys_sessions(
+        main_path, mouse_id, session_date, False, output_dir.posix())
+
+    assert (output_dir / "trials_table.csv").exists(), \
+        "Trials table should exist where we expect it to."
