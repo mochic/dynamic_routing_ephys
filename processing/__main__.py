@@ -1,27 +1,4 @@
-from DR_processing_script import process_ephys_sessions
-
-
-def infer_exp_meta(session_output_dir: str) -> tuple[str, str]:
-    """Temp solution for a potentially better solution that doesnt rely
-    on the structure of a filename
-
-    Returns
-    -------
-    tuple
-        mouse_id
-        session_date: serialized as string in format MMDDYYYY
-    """
-    mouse_id = [x for x in session_output_dir.split(
-        '_') if len(x) == 6 and x.isdigit()][0]
-    rem_dashes = session_output_dir.replace('-', '')
-    rem_dashes = rem_dashes.replace('\\', '_')
-    session_date = [x for x in rem_dashes.split(
-        '_') if len(x) == 8 and x.isdigit()]
-
-    if len(session_date) > 0:
-        session_date = session_date[0]
-
-    return mouse_id, session_date
+from DR_processing_script import process_ephys_sessions, infer_exp_meta
 
 
 if __name__ == "__main__":
