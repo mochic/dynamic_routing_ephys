@@ -17,12 +17,12 @@ import pickle
 import os
 import glob
 
-from DR_processing_utils import load_behavior_data, load_rf_mapping, sync_data_streams
-from DR_processing_utils import align_trial_times, align_rf_trial_times
-from DR_processing_utils import align_spike_times, load_lick_times, define_RF_first
+from .DR_processing_utils import load_behavior_data, load_rf_mapping, sync_data_streams
+from .DR_processing_utils import align_trial_times, align_rf_trial_times
+from .DR_processing_utils import align_spike_times, load_lick_times, define_RF_first
 
 # only for sound pilot recordings
-from DR_processing_utils import load_sound_pilot_data, sync_data_streams_sound_pilot
+from .DR_processing_utils import load_sound_pilot_data, sync_data_streams_sound_pilot
 
 
 EXP_MAP = {

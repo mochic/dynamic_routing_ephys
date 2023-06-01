@@ -1,4 +1,4 @@
-from DR_processing_script import process_ephys_sessions, infer_exp_meta
+from .DR_processing_script import process_ephys_sessions, infer_exp_meta
 
 
 if __name__ == "__main__":
