@@ -123,6 +123,8 @@ class Session:
         self.units['ML_coord']=np.nan
         self.good_units['ML_coord']=np.nan
         
+        self.channels={}
+        
         if os.path.isdir(os.path.join(tissuecyte_path,self.metadata['mouseID'])):
             for probe in self.units['probe'].unique():
                 if type(probe)==str:
@@ -131,6 +133,7 @@ class Session:
                                      '*'+probe+str(self.metadata['ephys_session_num'])+'_channels*'))
                     if len(channels_table_path)==1:
                         channels_table=pd.read_csv(channels_table_path[0])
+                        self.channels[probe] = channels_table
                         print('probe'+probe+' areas found')
                     else:
                         print('probe'+probe+' areas not found')

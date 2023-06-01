@@ -431,6 +431,8 @@ def sync_data_streams(syncPath,ephysPath,nidaqPath):
         syncData[key]['sampleRate'] = sampleRate
         if (np.isnan(sampleRate))|(~np.isfinite(sampleRate)):
             syncData[key]['sampleRate'] = ephysSampleRate
+            
+        syncData[key]['LFPsampleRate'] = syncData[key]['sampleRate']/12
 
     return syncData, probeNames, probeDirNames
 
