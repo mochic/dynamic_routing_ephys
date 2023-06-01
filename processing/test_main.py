@@ -9,7 +9,7 @@ def generate_checksum(filepath: str) -> bytes:
     with open(filepath, "r") as f:
         contents = f.read()
 
-    return hashlib.md5(contents).digest()
+    return hashlib.md5(contents.encode("utf-8")).digest()
 
 
 MAIN_PATH = pathlib.Path(
