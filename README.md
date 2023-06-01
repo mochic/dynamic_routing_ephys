@@ -21,7 +21,9 @@ poetry install
 
 ## Tests
 
-poetry run pytest ./tests
+```console
+poetry run pytest ./processing/test_processing.py
+```
 
 *Requires access to /allen*
 

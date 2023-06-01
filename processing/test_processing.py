@@ -3,7 +3,7 @@ import pytest
 import hashlib
 
 # from processing.DR_processing_script import process_ephys_sessions
-from dynamic_routing_ephys.processing import DR_processing_script
+from DR_processing_script import process_ephys_sessions
 
 
 def generate_checksum(filepath: str) -> hashlib._Hash:
