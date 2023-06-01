@@ -36,9 +36,9 @@ def test_basic(tmpdir):
     """
     output_dir = tmpdir.mkdir("output")
 
-    main_path = MAIN_PATH.posix()
-    mouse_id, session_date = infer_exp_meta(MAIN_PATH.posix())
-
+    main_path = str(MAIN_PATH)
+    mouse_id, session_date = infer_exp_meta(main_path)
+    print("Inferred: mouse_id=%s session_date=%s" % (mouse_id, session_date, ))
     process_ephys_sessions(
         main_path, mouse_id, session_date, False, output_dir.posix())
 
