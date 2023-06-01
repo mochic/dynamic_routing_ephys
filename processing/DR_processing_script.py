@@ -24,7 +24,7 @@ from DR_processing_utils import align_spike_times, load_lick_times, define_RF_fi
 # only for sound pilot recordings
 from DR_processing_utils import load_sound_pilot_data, sync_data_streams_sound_pilot
 
-# %%
+
 EXP_MAP = {
     # sound pilot
     "625820": [
@@ -72,11 +72,8 @@ EXP_MAP = {
     ],
     # DR pilot
     "626791": [
-        # re-run with new datajoint output
         r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220815",
-        # re-run with new datajoint output
         r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220816",
-        # re-run with new datajoint output
         r"\\allen\programs\mindscope\workgroups\dynamicrouting\PilotEphys\Task 2 pilot\DRpilot_626791_20220817",
     ],
     "636766": [
