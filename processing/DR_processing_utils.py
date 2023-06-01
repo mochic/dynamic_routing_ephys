@@ -16,8 +16,8 @@ import os
 import ast
 # import .sync.sync as sync
 from .sync import sync
-import probeSync
-import ecephys
+from . import probeSync
+from . import ecephys
 import glob
 
 # %%
