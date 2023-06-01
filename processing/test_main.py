@@ -2,7 +2,7 @@ import pathlib
 import pytest
 import hashlib
 
-from DR_processing_script import process_ephys_sessions, infer_exp_meta
+from .DR_processing_script import process_ephys_sessions, infer_exp_meta
 
 
 def generate_checksum(filepath: str) -> bytes:
