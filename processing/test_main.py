@@ -34,7 +34,8 @@ def test_basic(tmpdir):
     """Computes the rf mapping and trials tables and verifies that their 
     contents match a previously computed result
     """
-    output_dir = tmpdir.mkdir("output").absolute()
+    output_dir = tmpdir.mkdir("output").posix()
+    print(output_dir)
 
     raise Exception("bur")
     # process_ephys_sessions(
