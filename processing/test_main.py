@@ -40,7 +40,7 @@ def test_basic(tmpdir):
     mouse_id, session_date = infer_exp_meta(main_path)
     print("Inferred: mouse_id=%s session_date=%s" % (mouse_id, session_date, ))
     process_ephys_sessions(
-        main_path, mouse_id, session_date, False, output_dir.posix())
+        main_path, mouse_id, session_date, False, str(output_dir))
 
     assert (output_dir / "trials_table.csv").exists(), \
         "Trials table should exist where we expect it to."

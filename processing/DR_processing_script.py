@@ -134,7 +134,7 @@ def infer_exp_meta(session_output_dir: str) -> tuple[str, str]:
     -------
     tuple
         mouse_id
-        session_date: serialized as string in format MMDDYYYY
+        session_date: serialized as string in format YYYYMMDD
     """
     mouse_id = [x for x in session_output_dir.split(
         '_') if len(x) == 6 and x.isdigit()][0]
